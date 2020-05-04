@@ -1,0 +1,85 @@
+digraph adventure {
+        {rank=same; mosh_pit; bar; lounge}
+        {rank=same; cosmo; beer; manhattan}
+        {rank=same; light; medium; hardcore}
+        {rank=same; dance_style; cocktail; lounge_decision}
+        {rank=same; back_away; hit_gut; hit_face}
+        {rank=same; win; die}
+        {rank=same; girl; angry_guy; drug_dealer}
+        {rank=same; drug_deal; fight_or_flight; help_girl}
+        {rank=same; dont_buy; buy}
+
+        pick_jacket [shape=box];
+        where_to_go [shape=box];
+        cocktail [shape=box];
+        dance_style [shape=box];
+        fight_or_flight [shape=box];
+        drug_deal [shape=box];
+        lounge_decision [shape=box];
+        exit [shape=box];
+        help_girl [shape=box];
+
+        home [label="home (1)"];
+        pick_jacket [label="pick_jacket (2)"];
+        club [label="club (3)"];
+        where_to_go [label="where_to_go (4)"];
+        mosh_pit [label="mosh_pit (5)"];
+        lounge [label="lounge (6)"];
+        bar [label="bar (7)"];
+        dance_style [label="dance_style (8)"];
+        lounge_decision [label="lounge_decision (9)"];
+        cocktail [label="cocktail (10)"];
+        hardcore [label="hardcore (11)"];
+        light [label="light (12)"];
+        medium [label="medium (13)"];
+        sit [label="sit (14)"];
+        t_shirt [label="t_shirt (15)"];
+        order_drink [label="order_drink (16)"];
+        beer [label="beer (17)"];
+        cosmo [label="cosmo (18)"];
+        manhattan [label="manhattan (19)"];
+        angry_guy [label="angry_guy (20)"];
+        drug_dealer [label="drug_dealer (21)"];
+        girl [label="girl (22)"];
+        fight_or_flight [label="fight_or_flight (23)"];
+        help_girl [label="help_girl (24)"];
+        drug_deal [label="drug_deal (25)"];
+        hit_face [label="hit_face (26)"];
+        back_away [label="back_away (27)"];
+        hit_gut [label="hit_gut (28)"];
+        buy [label="buy (29)"];
+        dont_buy [label="dont_buy (30)"];
+        exit [label="exit (31)"];
+        front [label="front (32)"];
+        bathroom [label="bathroom (33)"];
+        red_door [label="red_door (34)"];
+        win [label="win (35)"];
+        die [label="die (36)"];
+
+        home -> pick_jacket -> club;
+        club -> where_to_go -> {mosh_pit, lounge, bar};
+        girl -> help_girl -> {front, red_door, mosh_pit};
+        exit -> {red_door, front, bathroom}
+        front -> win;
+        red_door -> die;
+        lounge -> lounge_decision -> {order_drink, sit, t_shirt};
+        t_shirt -> drug_dealer;
+        order_drink -> bar;
+        sit -> angry_guy;
+        drug_dealer -> drug_deal -> {buy, dont_buy, red_door};
+        bathroom -> die;
+        buy -> die;
+        dont_buy -> girl;
+        bar -> cocktail -> {cosmo, beer, manhattan};
+        cosmo -> drug_dealer;
+        beer -> angry_guy;
+        manhattan -> girl;
+        mosh_pit -> dance_style;
+        dance_style -> {light, medium, hardcore};
+        light -> drug_dealer;
+        medium -> lounge;
+        hardcore -> angry_guy -> fight_or_flight -> {back_away, hit_gut, hit_face};
+        back_away -> exit;
+        hit_gut -> drug_dealer;
+        hit_face -> die;
+}

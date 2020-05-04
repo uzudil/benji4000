@@ -1,0 +1,33 @@
+{
+    "scopeName": "source.bscript",
+    "patterns": [
+        {
+            "name": "comment.source.bscript",
+            "match": "#.*"
+        },
+        {
+            "name": "keyword.source.bscript",
+            "match": "(if|else|def|end|while|return|del|null|=>)"
+        },
+        {
+            "name": "keyword.operator.source.bscript",
+            "match": "(=|<|>|<=|>=|!=)"
+        },
+        {
+            "name": "terminator.js",
+            "match": ";"
+        },
+        {
+            "name": "string.source.bscript",
+            "match": "\"(.*?)\""
+        },
+        {
+            "name": "function.source.bscript",
+            "match": "(.*+)\\(.*\\)"
+        },
+        {
+            "name": "number.source.bscript",
+            "match": "[0-9]+(\\.[0-9]+)?"
+        }
+    ]
+}

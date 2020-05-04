@@ -1,0 +1,5 @@
+Experimental syntax highlighting for .b files.
+
+To enable, copy it: (on mac)
+cp -r bscript ~/.vscode/extensions/
+
