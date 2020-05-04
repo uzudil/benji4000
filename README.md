@@ -22,7 +22,7 @@ The programming language of benji. Execution starts by calling the function name
 
 Bscript features higher order functions, control flow commands, global variables and constants, etc. 
 
-Browse the [tests](https://github.com/gabor-lbl/benji4000/tree/master/src/tests) for examples or see the [wiki](/wiki) for more info.
+Browse the [tests](https://github.com/gabor-lbl/benji4000/tree/master/src/tests) for examples or see the [wiki](https://github.com/uzudil/benji4000/wiki) for more info.
 
 ## bscript syntax highlighting
 The vscode directory contains a plugin for syntax highlighting for .b files.
