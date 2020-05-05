@@ -16,7 +16,9 @@ func repl(video *gfx.Gfx) {
 func main() {
 	var source string
 	flag.StringVar(&source, "source", "", "the bscript file to run")
+
 	showAst := flag.Bool("ast", false, "print AST and not execute?")
+
 	flag.Parse()
 
 	video := gfx.NewGfx()

@@ -10,6 +10,48 @@ import (
 	"github.com/uzudil/benji4000/gfx"
 )
 
+func floatArgs(ctx *Context, count int, arg []interface{}) ([]float64, error) {
+	if len(arg) < count {
+		return nil, fmt.Errorf("%s Wrong number of arguments. Got %d instead of %d", ctx.Pos, count, len(arg))
+	}
+	r := make([]float64, count)
+	for index, a := range arg[0:count] {
+		f, ok := a.(float64)
+		if !ok {
+			return nil, fmt.Errorf("%s Argument %d should be a number (%v)", ctx.Pos, index, a)
+		}
+		r[index] = f
+	}
+	return r, nil
+}
+
+func intArgs(ctx *Context, count int, arg []interface{}) ([]int, error) {
+	f, err := floatArgs(ctx, count, arg)
+	if err != nil {
+		return nil, err
+	}
+	r := make([]int, count)
+	for index, value := range f {
+		r[index] = int(value)
+	}
+	return r, nil
+}
+
+func stringArgs(ctx *Context, count int, arg []interface{}) ([]string, error) {
+	if len(arg) < count {
+		return nil, fmt.Errorf("%s Wrong number of arguments. Got %d instead of %d", ctx.Pos, count, len(arg))
+	}
+	r := make([]string, count)
+	for index, a := range arg[0:count] {
+		s, ok := a.(string)
+		if !ok {
+			return nil, fmt.Errorf("%s Argument %d should be a string (%v)", ctx.Pos, index, s)
+		}
+		r[index] = s
+	}
+	return r, nil
+}
+
 func print(ctx *Context, arg ...interface{}) (interface{}, error) {
 	ctx.Video.Println(EvalString(arg[0]), true)
 	ctx.Video.UpdateVideo()
@@ -98,20 +140,11 @@ func substr(ctx *Context, arg ...interface{}) (interface{}, error) {
 }
 
 func replace(ctx *Context, arg ...interface{}) (interface{}, error) {
-	s, ok := arg[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("argument 1 to replace() should be a string")
+	s, err := stringArgs(ctx, 3, arg)
+	if err != nil {
+		return nil, err
 	}
-	oldstring, ok := arg[1].(string)
-	if !ok {
-		return nil, fmt.Errorf("argument 2 to replace() should be a string")
-	}
-	newstring, ok := arg[2].(string)
-	if !ok {
-		return nil, fmt.Errorf("argument 3 to replace() should be a string")
-	}
-
-	return strings.ReplaceAll(s, oldstring, newstring), nil
+	return strings.ReplaceAll(s[0], s[1], s[2]), nil
 }
 
 func keys(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -133,149 +166,76 @@ func setVideoMode(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("First parameter should be the number of the video mode")
 	}
+	if mode < 0 || mode > 2 {
+		return nil, fmt.Errorf("Invalid video mode")
+	}
 	ctx.Video.VideoMode = int(mode)
 	return nil, nil
 }
 
 func scroll(ctx *Context, arg ...interface{}) (interface{}, error) {
-	dx, ok := arg[0].(float64)
-	if !ok {
-		return nil, fmt.Errorf("First parameter should be a number")
+	i, err := intArgs(ctx, 2, arg)
+	if err != nil {
+		return nil, err
 	}
-	dy, ok := arg[1].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Second parameter should be a number")
-	}
-	ctx.Video.Scroll(int(dx), int(dy))
+	ctx.Video.Scroll(i[0], i[1])
 	return nil, nil
 }
 
 func setPixel(ctx *Context, arg ...interface{}) (interface{}, error) {
-	x, ok := arg[0].(float64)
-	if !ok {
-		return nil, fmt.Errorf("First parameter should be a number")
+	i, err := intArgs(ctx, 3, arg)
+	if err != nil {
+		return nil, err
 	}
-	y, ok := arg[1].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Second parameter should be a number")
-	}
-	color, ok := arg[2].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Third parameter should be a number")
-	}
-	return nil, ctx.Video.SetPixel(int(x), int(y), uint8(color))
+	return nil, ctx.Video.SetPixel(i[0], i[1], uint8(i[2]))
 }
 
 func drawText(ctx *Context, arg ...interface{}) (interface{}, error) {
-	x, ok := arg[0].(float64)
-	if !ok {
-		return nil, fmt.Errorf("First parameter should be a number")
-	}
-	y, ok := arg[1].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Second parameter should be a number")
-	}
-	fg, ok := arg[2].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Third parameter should be a number")
-	}
-	bg, ok := arg[3].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Fourth parameter should be a number")
+	i, err := intArgs(ctx, 4, arg)
+	if err != nil {
+		return nil, err
 	}
 	text, ok := arg[4].(string)
 	if !ok {
 		return nil, fmt.Errorf("Fifth parameter should be a string")
 	}
-	return nil, ctx.Video.DrawText(int(x), int(y), text, uint8(fg), uint8(bg))
+	return nil, ctx.Video.DrawText(i[0], i[1], text, uint8(i[2]), uint8(i[3]))
 }
 
 func drawFont(ctx *Context, arg ...interface{}) (interface{}, error) {
-	x, ok := arg[0].(float64)
-	if !ok {
-		return nil, fmt.Errorf("First parameter should be a number")
-	}
-	y, ok := arg[1].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Second parameter should be a number")
-	}
-	fg, ok := arg[2].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Third parameter should be a number")
-	}
-	bg, ok := arg[3].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Fourth parameter should be a number")
+	f, err := floatArgs(ctx, 4, arg)
+	if err != nil {
+		return nil, err
 	}
 	ch, ok := arg[4].(float64)
 	if !ok {
 		return nil, fmt.Errorf("Fifth parameter should be a number")
 	}
-	return nil, ctx.Video.DrawFont(int(x), int(y), rune(ch), uint8(fg), uint8(bg))
+	return nil, ctx.Video.DrawFont(int(f[0]), int(f[1]), rune(ch), uint8(f[2]), uint8(f[3]))
 }
 
 func drawLine(ctx *Context, arg ...interface{}) (interface{}, error) {
-	x, ok := arg[0].(float64)
-	if !ok {
-		return nil, fmt.Errorf("First parameter should be a number")
+	i, err := intArgs(ctx, 5, arg)
+	if err != nil {
+		return nil, err
 	}
-	y, ok := arg[1].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Second parameter should be a number")
-	}
-	x2, ok := arg[2].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Third parameter should be a number")
-	}
-	y2, ok := arg[3].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Fourth parameter should be a number")
-	}
-	color, ok := arg[4].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Fifth parameter should be a number")
-	}
-	return nil, ctx.Video.DrawLine(int(x), int(y), int(x2), int(y2), uint8(color))
+	return nil, ctx.Video.DrawLine(i[0], i[1], i[2], i[3], uint8(i[4]))
 }
 
 func drawCircle(ctx *Context, arg ...interface{}) (interface{}, error) {
-	x, ok := arg[0].(float64)
-	if !ok {
-		return nil, fmt.Errorf("First parameter should be a number")
+	i, err := intArgs(ctx, 4, arg)
+	if err != nil {
+		return nil, err
 	}
-	y, ok := arg[1].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Second parameter should be a number")
-	}
-	r, ok := arg[2].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Third parameter should be a number")
-	}
-	color, ok := arg[3].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Fourth parameter should be a number")
-	}
-	return nil, ctx.Video.DrawCircle(int(x), int(y), int(r), uint8(color))
+	return nil, ctx.Video.DrawCircle(i[0], i[1], i[2], uint8(i[3]))
 }
 
 func fillCircle(ctx *Context, arg ...interface{}) (interface{}, error) {
-	x, ok := arg[0].(float64)
-	if !ok {
-		return nil, fmt.Errorf("First parameter should be a number")
+	i, err := intArgs(ctx, 4, arg)
+	if err != nil {
+		return nil, err
 	}
-	y, ok := arg[1].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Second parameter should be a number")
-	}
-	r, ok := arg[2].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Third parameter should be a number")
-	}
-	color, ok := arg[3].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Fourth parameter should be a number")
-	}
-	return nil, ctx.Video.FillCircle(int(x), int(y), int(r), uint8(color))
+	return nil, ctx.Video.FillCircle(i[0], i[1], i[2], uint8(i[3]))
 }
 
 func setBackground(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -288,51 +248,19 @@ func setBackground(ctx *Context, arg ...interface{}) (interface{}, error) {
 }
 
 func fillRect(ctx *Context, arg ...interface{}) (interface{}, error) {
-	x, ok := arg[0].(float64)
-	if !ok {
-		return nil, fmt.Errorf("First parameter should be a number")
+	i, err := intArgs(ctx, 5, arg)
+	if err != nil {
+		return nil, err
 	}
-	y, ok := arg[1].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Second parameter should be a number")
-	}
-	x2, ok := arg[2].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Third parameter should be a number")
-	}
-	y2, ok := arg[3].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Fourth parameter should be a number")
-	}
-	color, ok := arg[4].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Fifth parameter should be a number")
-	}
-	return nil, ctx.Video.FillRect(int(x), int(y), int(x2), int(y2), uint8(color))
+	return nil, ctx.Video.FillRect(i[0], i[1], i[2], i[3], uint8(i[4]))
 }
 
 func drawRect(ctx *Context, arg ...interface{}) (interface{}, error) {
-	x, ok := arg[0].(float64)
-	if !ok {
-		return nil, fmt.Errorf("First parameter should be a number")
+	i, err := intArgs(ctx, 5, arg)
+	if err != nil {
+		return nil, err
 	}
-	y, ok := arg[1].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Second parameter should be a number")
-	}
-	x2, ok := arg[2].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Third parameter should be a number")
-	}
-	y2, ok := arg[3].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Fourth parameter should be a number")
-	}
-	color, ok := arg[4].(float64)
-	if !ok {
-		return nil, fmt.Errorf("Fifth parameter should be a number")
-	}
-	return nil, ctx.Video.DrawRect(int(x), int(y), int(x2), int(y2), uint8(color))
+	return nil, ctx.Video.DrawRect(i[0], i[1], i[2], i[3], uint8(i[4]))
 }
 
 func clearVideo(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -396,6 +324,88 @@ func isKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) {
 	gfx.KeyLock.Unlock()
 
 	return b, nil
+}
+
+func fontIndex(ctx *Context, arg []interface{}) (int, error) {
+	// Font *[512][8]uint8
+	f, ok := arg[0].(float64)
+	if !ok {
+		return 0, fmt.Errorf("%s first arg should be a number (%v)", ctx.Pos, arg[0])
+	}
+	index := int(f)
+	if index < 0 || index >= len(ctx.Video.Font) {
+		return 0, fmt.Errorf("%s index out of bounds - should be 0 to %d", ctx.Pos, len(ctx.Video.Font))
+	}
+	return index, nil
+}
+
+func getFont(ctx *Context, arg ...interface{}) (interface{}, error) {
+	index, err := fontIndex(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	font := [8]float64{}
+	for i, f := range ctx.Video.Font[index] {
+		font[i] = float64(f)
+	}
+	return font, nil
+}
+
+func setFont(ctx *Context, arg ...interface{}) (interface{}, error) {
+	index, err := fontIndex(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	a, ok := arg[1].(*[]interface{})
+	if !ok {
+		return nil, fmt.Errorf("%s second argument should be an array (%v)", ctx.Pos, arg[1])
+	}
+	if len(*a) != 8 {
+		return nil, fmt.Errorf("%s font array should have length of 8", ctx.Pos)
+	}
+	font := [8]uint8{}
+	for i, aa := range *a {
+		f, ok := aa.(float64)
+		if !ok {
+			return nil, fmt.Errorf("%s second argument should contain only numbers (%v)", ctx.Pos, arg[1])
+		}
+		font[i] = uint8(f)
+	}
+	for i, v := range font {
+		ctx.Video.Font[index][i] = v
+	}
+	return nil, nil
+}
+
+func getColor(ctx *Context, arg ...interface{}) (interface{}, error) {
+	f, ok := arg[0].(float64)
+	if !ok {
+		return 0, fmt.Errorf("%s first arg should be a number (%v)", ctx.Pos, arg[0])
+	}
+	index := int(f)
+	if index < 0 || index >= len(ctx.Video.Colors) {
+		return 0, fmt.Errorf("%s index out of bounds - should be 0 to %d", ctx.Pos, len(ctx.Video.Colors))
+	}
+	return [3]float64{
+		float64(ctx.Video.Colors[index*3]),
+		float64(ctx.Video.Colors[index*3+1]),
+		float64(ctx.Video.Colors[index*3+2]),
+	}, nil
+}
+
+func setColor(ctx *Context, arg ...interface{}) (interface{}, error) {
+	a, err := intArgs(ctx, 4, arg)
+	if err != nil {
+		return nil, err
+	}
+	index := a[0]
+	if index < 0 || index >= len(ctx.Video.Colors) {
+		return 0, fmt.Errorf("%s index out of bounds - should be 0 to %d", ctx.Pos, len(ctx.Video.Colors))
+	}
+	ctx.Video.Colors[index*3] = uint8(a[1])
+	ctx.Video.Colors[index*3+1] = uint8(a[2])
+	ctx.Video.Colors[index*3+2] = uint8(a[3])
+	return nil, nil
 }
 
 func assert(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -491,6 +501,10 @@ func Builtins() map[string]Builtin {
 		"int":           toInt,
 		"round":         toRound,
 		"abs":           toAbs,
+		"getFont":       getFont,
+		"setFont":       setFont,
+		"getColor":      getColor,
+		"setColor":      setColor,
 	}
 }
 
