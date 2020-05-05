@@ -67,7 +67,7 @@ const (
 const CURSOR_FONT = 128 + 3
 
 // NewGfx lets you create a new Gfx video card
-func NewGfx() *Gfx {
+func NewGfx(scale int, fullscreen bool) *Gfx {
 	videoMemory := [Width * Height]byte{}
 	for i := range videoMemory {
 		videoMemory[i] = COLOR_LIGHT_BLUE
@@ -76,7 +76,7 @@ func NewGfx() *Gfx {
 		VideoMode:   GfxTextMode,
 		VideoMemory: videoMemory,
 		TextMemory:  [Width / 8 * Height / 8]int32{},
-		Render:      NewRender(),
+		Render:      NewRender(scale, fullscreen),
 		Colors: [16 * 3]uint8{
 			// C64 colors :-)
 			0x00, 0x00, 0x00,

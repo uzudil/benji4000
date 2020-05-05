@@ -19,9 +19,14 @@ func main() {
 
 	showAst := flag.Bool("ast", false, "print AST and not execute?")
 
+	fullscreen := flag.Bool("fullscreen", false, "Run at fullscreen")
+
+	var scale int
+	flag.IntVar(&scale, "scale", 2, "Image scale factor")
+
 	flag.Parse()
 
-	video := gfx.NewGfx()
+	video := gfx.NewGfx(scale, *fullscreen)
 
 	if source != "" {
 		go func() {

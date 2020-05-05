@@ -12,8 +12,6 @@ import (
 )
 
 const (
-	scale = 2
-
 	vertexShaderSource = `
 		#version 410
 		layout (location = 0) in vec3 aPos;
@@ -77,7 +75,7 @@ type Render struct {
 	CharInput  chan rune
 }
 
-func NewRender() *Render {
+func NewRender(scale int, fullscreen bool) *Render {
 	// make sure this happens first
 	render := &Render{
 		PixelMemory: [Width * Height * 3]byte{},
@@ -88,7 +86,7 @@ func NewRender() *Render {
 		StopInput:   make(chan int, 100),
 		CharInput:   make(chan rune, 1000),
 	}
-	render.Window = initGlfw(render)
+	render.Window = initGlfw(render, scale, fullscreen)
 	render.Program = initOpenGL()
 	render.Vao = makeVao()
 
@@ -98,20 +96,33 @@ func NewRender() *Render {
 }
 
 // initGlfw initializes glfw and returns a Window to use.
-func initGlfw(render *Render) *glfw.Window {
+func initGlfw(render *Render, scale int, fullscreen bool) *glfw.Window {
 	if err := glfw.Init(); err != nil {
 		panic(err)
 	}
-	glfw.WindowHint(glfw.Resizable, glfw.True)
+
 	glfw.WindowHint(glfw.ContextVersionMajor, 4)
 	glfw.WindowHint(glfw.ContextVersionMinor, 1)
 	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
 	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
 
-	window, err := glfw.CreateWindow(Width*scale, Height*scale, "Benji4000", nil, nil)
+	var window *glfw.Window
+	var err error
+	if fullscreen {
+		monitor := glfw.GetPrimaryMonitor()
+		mode := monitor.GetVideoMode()
+		fmt.Printf("dimensions=%dx%d\n", mode.Width, mode.Height)
+
+		// doesn't work right on my mac's second monitor...
+		window, err = glfw.CreateWindow(Width, Height, "Benji4000", monitor, nil)
+	} else {
+		glfw.WindowHint(glfw.Resizable, glfw.True)
+		window, err = glfw.CreateWindow(Width*scale, Height*scale, "Benji4000", nil, nil)
+	}
 	if err != nil {
 		panic(err)
 	}
+
 	window.MakeContextCurrent()
 	window.SetCharCallback(func(w *glfw.Window, char rune) {
 		if render.InputMode {
