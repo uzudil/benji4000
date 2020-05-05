@@ -129,7 +129,6 @@ def movePlayer() {
 
         if(handled = false) {
             if(canScroll()) {
-                scroll(-2 * player["dir"], 0);
                 scrollStep := scrollStep - player["dir"]*2;
                 if(scrollStep >= GROUND_STEP) {
                     scrollStep := 0;
