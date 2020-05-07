@@ -369,22 +369,21 @@ func (render *Render) MainLoop() {
 		gl.BindVertexArray(render.Vao)
 		gl.DrawArrays(gl.TRIANGLES, 0, int32(len(screen)/8))
 
+		render.SpriteLock.Lock()
 		for _, sprite := range render.Sprites {
 			if sprite.Show {
-				render.SpriteLock.Lock()
 				gl.BindTexture(gl.TEXTURE_2D, sprite.Textures[sprite.ImageIndex])
 				gl.Uniform1i(texUniform, 0)
 
 				sprite.Model = mgl32.Ident4().
 					Mul4(mgl32.Translate3D(float32(sprite.X-Width/2)/float32(Width/2), -float32(sprite.Y-Height/2)/float32(Height/2), 0)).
 					Mul4(mgl32.Scale3D(float32(sprite.W)/float32(Width), float32(sprite.H)/float32(Height), 1))
-				render.SpriteLock.Unlock()
 
-				spriteModel := sprite.Model
-				gl.UniformMatrix4fv(modelUniform, 1, false, &spriteModel[0])
+				gl.UniformMatrix4fv(modelUniform, 1, false, &sprite.Model[0])
 				gl.DrawArrays(gl.TRIANGLES, 0, int32(len(screen)/8))
 			}
 		}
+		render.SpriteLock.Unlock()
 
 		glfw.PollEvents()
 		render.Window.SwapBuffers()
