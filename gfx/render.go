@@ -62,7 +62,7 @@ var (
 )
 
 type Sprite struct {
-	Texture    uint32
+	Textures   []uint32
 	Model      mgl32.Mat4
 	X          int32
 	Y          int32
@@ -79,7 +79,7 @@ type SpriteCommand struct {
 	H       int
 	X       int
 	Y       int
-	Pixels  []byte
+	Pixels  [][]byte
 }
 
 type Render struct {
@@ -281,14 +281,16 @@ func (render *Render) runSpriteCommand(command SpriteCommand) error {
 
 		sprite.W = int32(command.W)
 		sprite.H = int32(command.H)
-		image := command.Pixels
 
 		// update the texture
-		gl.GenTextures(1, &sprite.Texture)
-		gl.BindTexture(gl.TEXTURE_2D, sprite.Texture)
-		setTextureParams()
-		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, sprite.W, sprite.H, 0, gl.RGB, gl.UNSIGNED_BYTE, nil)
-		gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, sprite.W, sprite.H, gl.RGB, gl.UNSIGNED_BYTE, gl.Ptr(&image[0]))
+		sprite.Textures = make([]uint32, len(command.Pixels))
+		gl.GenTextures(int32(len(sprite.Textures)), &sprite.Textures[0])
+		for index, image := range command.Pixels {
+			gl.BindTexture(gl.TEXTURE_2D, sprite.Textures[index])
+			setTextureParams()
+			gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, sprite.W, sprite.H, 0, gl.RGB, gl.UNSIGNED_BYTE, nil)
+			gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, sprite.W, sprite.H, gl.RGB, gl.UNSIGNED_BYTE, gl.Ptr(&image[0]))
+		}
 
 		// translate
 		sprite.Model = mgl32.Ident4().
@@ -369,12 +371,12 @@ func (render *Render) MainLoop() {
 
 		for _, sprite := range render.Sprites {
 			if sprite.Show {
-				gl.BindTexture(gl.TEXTURE_2D, sprite.Texture)
+				render.SpriteLock.Lock()
+				gl.BindTexture(gl.TEXTURE_2D, sprite.Textures[sprite.ImageIndex])
 				gl.Uniform1i(texUniform, 0)
 
-				render.SpriteLock.Lock()
 				sprite.Model = mgl32.Ident4().
-					Mul4(mgl32.Translate3D(float32(sprite.X-Width/2)/float32(Width/2), float32(sprite.Y-Height/2)/float32(Height/2), 0)).
+					Mul4(mgl32.Translate3D(float32(sprite.X-Width/2)/float32(Width/2), -float32(sprite.Y-Height/2)/float32(Height/2), 0)).
 					Mul4(mgl32.Scale3D(float32(sprite.W)/float32(Width), float32(sprite.H)/float32(Height), 1))
 				render.SpriteLock.Unlock()
 

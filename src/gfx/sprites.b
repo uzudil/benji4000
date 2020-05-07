@@ -1,29 +1,51 @@
 const SPRITE_INDEX = 0;
 
-x := 80;
-dir := 1;
-y := 100;
-ydir := 1;    
+pos := [
+    {
+        "x": 40,
+        "dir": 1,
+        "y": 100,
+        "ydir": 1
+    },
+    {
+        "x": 80,
+        "dir": -1,
+        "y": 100,
+        "ydir": 1
+    },
+    {
+        "x": 60,
+        "dir": 1,
+        "y": 100,
+        "ydir": -1
+    },
+    {
+        "x": 100,
+        "dir": -1,
+        "y": 100,
+        "ydir": -1
+    }
+];
 imgIndex := 0;
 
-def move() {
-    x := x + dir;
-    if(x >= 160) {
-        dir := -1;
-        x := 159;
+def move(p) {
+    p["x"] := p["x"] + p["dir"];
+    if(p["x"] >= 160) {
+        p["dir"] := -1;
+        p["x"] := 159;
     }
-    if(x < 0) {
-        dir := 1;
-        x := 0;
+    if(p["x"] < 0) {
+        p["dir"] := 1;
+        p["x"] := 0;
     }
-    y := y + ydir;
-    if(y >= 200) {
-        ydir := -1;
-        y := 199;
+    p["y"] := p["y"] + p["ydir"];
+    if(p["y"] >= 200) {
+        p["ydir"] := -1;
+        p["y"] := 199;
     }
-    if(y < 0) {
-        ydir := 1;
-        y := 0;
+    if(p["y"] < 0) {
+        p["ydir"] := 1;
+        p["y"] := 0;
     }
 }
 
@@ -33,35 +55,50 @@ def main() {
     clearVideo();
 
     # draw something
-    fillRect(10, 10, 50, 50, COLOR_RED);
-    fillCircle(50, 50, 30, COLOR_GREEN);
-
-    drawText(10, 180, COLOR_WHITE, COLOR_BLACK, "Press SPACE");
+    fillRect(10, 10, 150, 50, COLOR_RED);
+    fillCircle(35, 35, 10, COLOR_GREEN);
 
     # copy it
     img1 := getImage(10, 10, 50, 50);
     img2 := getImage(15, 10, 55, 50);
     img3 := getImage(20, 10, 60, 50);
 
-    # set it as sprite 0
+    # create sprites
     setSprite(SPRITE_INDEX, [img1, img2, img3]);
+    setSprite(SPRITE_INDEX + 1, [img1, img2, img3]);
+    setSprite(SPRITE_INDEX + 2, [img1, img2, img3]);
+    setSprite(SPRITE_INDEX + 3, [img1, img2, img3]);
+    setSprite(SPRITE_INDEX + 4, [img1, img2, img3]);
+
+    clearVideo();
+    drawText(10, 180, COLOR_WHITE, COLOR_BLACK, "Press SPACE");
 
     timer := 0;
     imgTimer := 0;
     while(isKeyDown(KeySpace) != true) {
+        # notice: no clearVideo() in loop
+
         if(getTicks() > timer) {
             # draw the sprite
-            drawSprite(x, y, SPRITE_INDEX, imgIndex);
-            move();
-            timer := getTicks() + 0.005;
-        }
-        if(getTicks() > imgTimer) {
-            imgIndex := imgIndex + 1;
-            if(imgIndex >= 3) {
-                imgIndex := 0;
+            i := 0;
+            while(i < 4) {
+                drawSprite(pos[i]["x"], pos[i]["y"], SPRITE_INDEX + i, imgIndex);
+                move(pos[i]);
+                i:=i+1;
             }
-            imgTimer := getTicks() + 0.05;
+            timer := getTicks() + 0.005;
+            if(getTicks() > imgTimer) {
+                imgIndex := imgIndex + 1;
+                if(imgIndex >= 3) {
+                    imgIndex := 0;
+                }
+                imgTimer := getTicks() + 0.25;
+            }
         }
+
+        # draw another one so we can see the animation
+        drawSprite(30, 150, SPRITE_INDEX + 4, imgIndex);
+        
         updateVideo();
     }
 }

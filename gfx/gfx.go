@@ -416,7 +416,7 @@ func (gfx *Gfx) SetSprite(index int, imgs []map[string]interface{}) error {
 		Index:   index,
 		W:       w,
 		H:       h,
-		Pixels:  pixelList[0],
+		Pixels:  pixelList,
 	}
 	return nil
 }
