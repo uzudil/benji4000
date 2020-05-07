@@ -1,30 +1,10 @@
 const SPRITE_INDEX = 0;
 
 pos := [
-    {
-        "x": 40,
-        "dir": 1,
-        "y": 100,
-        "ydir": 1
-    },
-    {
-        "x": 80,
-        "dir": -1,
-        "y": 100,
-        "ydir": 1
-    },
-    {
-        "x": 60,
-        "dir": 1,
-        "y": 100,
-        "ydir": -1
-    },
-    {
-        "x": 100,
-        "dir": -1,
-        "y": 100,
-        "ydir": -1
-    }
+    { "x": 20, "dir": 1, "y": 100, "ydir": 1 },
+    { "x": 60, "dir": -1, "y": 100, "ydir": 1 },
+    { "x": 100, "dir": 1, "y": 100, "ydir": -1 },
+    { "x": 140, "dir": -1, "y": 100, "ydir": -1 }
 ];
 imgIndex := 0;
 
@@ -32,20 +12,16 @@ def move(p) {
     p["x"] := p["x"] + p["dir"];
     if(p["x"] >= 160) {
         p["dir"] := -1;
-        p["x"] := 159;
     }
     if(p["x"] < 0) {
         p["dir"] := 1;
-        p["x"] := 0;
     }
     p["y"] := p["y"] + p["ydir"];
     if(p["y"] >= 200) {
         p["ydir"] := -1;
-        p["y"] := 199;
     }
     if(p["y"] < 0) {
         p["ydir"] := 1;
-        p["y"] := 0;
     }
 }
 
@@ -72,11 +48,12 @@ def main() {
 
     clearVideo();
     drawText(10, 180, COLOR_WHITE, COLOR_BLACK, "Press SPACE");
+    updateVideo();
 
     timer := 0;
     imgTimer := 0;
     while(isKeyDown(KeySpace) != true) {
-        # notice: no clearVideo() in loop
+        # notice: no clearVideo()/updateVideo() in loop
 
         if(getTicks() > timer) {
             # draw the sprite
@@ -98,7 +75,5 @@ def main() {
 
         # draw another one so we can see the animation
         drawSprite(30, 150, SPRITE_INDEX + 4, imgIndex);
-        
-        updateVideo();
     }
 }
