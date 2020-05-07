@@ -263,6 +263,54 @@ func drawRect(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, ctx.Video.DrawRect(i[0], i[1], i[2], i[3], uint8(i[4]))
 }
 
+func getImage(ctx *Context, arg ...interface{}) (interface{}, error) {
+	i, err := intArgs(ctx, 4, arg)
+	if err != nil {
+		return nil, err
+	}
+	return ctx.Video.GetImage(i[0], i[1], i[2], i[3])
+}
+
+func drawImage(ctx *Context, arg ...interface{}) (interface{}, error) {
+	i, err := intArgs(ctx, 2, arg)
+	if err != nil {
+		return nil, err
+	}
+	img, ok := arg[2].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Third argument should be an image")
+	}
+	return nil, ctx.Video.DrawImage(i[0], i[1], img)
+}
+
+func setSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
+	index, ok := arg[0].(float64)
+	if !ok {
+		return nil, fmt.Errorf("First argument should be a number")
+	}
+	a, ok := arg[1].(*[]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Second argument should be an array")
+	}
+	imgs := make([]map[string]interface{}, len(*a))
+	for index, aa := range *a {
+		img, ok := aa.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("Second argument should be an array of images")
+		}
+		imgs[index] = img
+	}
+	return nil, ctx.Video.SetSprite(int(index), imgs)
+}
+
+func drawSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
+	i, err := intArgs(ctx, 4, arg)
+	if err != nil {
+		return nil, err
+	}
+	return nil, ctx.Video.DrawSprite(i[0], i[1], i[2], i[3])
+}
+
 func clearVideo(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, ctx.Video.ClearVideo()
 }
@@ -505,6 +553,10 @@ func Builtins() map[string]Builtin {
 		"setFont":       setFont,
 		"getColor":      getColor,
 		"setColor":      setColor,
+		"getImage":      getImage,
+		"drawImage":     drawImage,
+		"setSprite":     setSprite,
+		"drawSprite":    drawSprite,
 	}
 }
 

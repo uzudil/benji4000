@@ -324,6 +324,115 @@ func (cursor *Cursor) NewLine() {
 	}
 }
 
+func (gfx *Gfx) GetImage(x, y, x2, y2 int) (map[string]interface{}, error) {
+	w := x2 - x
+	h := y2 - y
+	data := make([]byte, w*h)
+	img := map[string]interface{}{
+		"width":  w,
+		"height": h,
+		"data":   data,
+	}
+	if gfx.VideoMode == GfxHiresMode {
+		for yy := y; yy < y2; yy++ {
+			copy(data[(yy-y)*w:], gfx.VideoMemory[yy*Width+x:yy*Width+x2])
+		}
+	} else if gfx.VideoMode == GfxMultiColorMode {
+		index := 0
+		for yy := y; yy < y2; yy++ {
+			for xx := x * 2; xx < x2*2; xx += 2 {
+				data[index] = gfx.VideoMemory[yy*Width+xx]
+				index++
+			}
+		}
+	} else {
+		return nil, fmt.Errorf("Only use in pixel modes")
+	}
+
+	return img, nil
+}
+
+func (gfx *Gfx) DrawImage(x, y int, img map[string]interface{}) error {
+	w := img["width"].(int)
+	h := img["height"].(int)
+	data := img["data"].([]byte)
+	if gfx.VideoMode == GfxHiresMode {
+		for yy := 0; yy < h; yy++ {
+			copy(gfx.VideoMemory[(y+yy)*Width+x:], data[yy*w:(yy+1)*w])
+		}
+	} else if gfx.VideoMode == GfxMultiColorMode {
+		index := 0
+		for yy := 0; yy < h; yy++ {
+			for xx := 0; xx < w; xx++ {
+				gfx.SetPixel(x+xx, y+yy, data[index])
+				index++
+			}
+		}
+	} else {
+		return fmt.Errorf("Only use in pixel modes")
+	}
+	return nil
+}
+
+func (gfx *Gfx) SetSprite(index int, imgs []map[string]interface{}) error {
+	img := imgs[0]
+	w := img["width"].(int)
+	if gfx.VideoMode == GfxMultiColorMode {
+		w *= 2
+	}
+	h := img["height"].(int)
+
+	pixelList := make([][]byte, len(imgs))
+
+	for i, img := range imgs {
+		data := img["data"].([]byte)
+		pixels := make([]byte, w*h*3)
+		if gfx.VideoMode == GfxHiresMode {
+			for i := 0; i < len(data); i++ {
+				idx := i * 3
+				pixels[idx] = gfx.Colors[data[i]*3]
+				pixels[idx+1] = gfx.Colors[data[i]*3+1]
+				pixels[idx+2] = gfx.Colors[data[i]*3+2]
+			}
+		} else if gfx.VideoMode == GfxMultiColorMode {
+			for i := 0; i < len(data); i++ {
+				idx := i * 2 * 3
+				pixels[idx] = gfx.Colors[data[i]*3]
+				pixels[idx+1] = gfx.Colors[data[i]*3+1]
+				pixels[idx+2] = gfx.Colors[data[i]*3+2]
+				idx = ((i * 2) + 1) * 3
+				pixels[idx] = gfx.Colors[data[i]*3]
+				pixels[idx+1] = gfx.Colors[data[i]*3+1]
+				pixels[idx+2] = gfx.Colors[data[i]*3+2]
+			}
+		} else {
+			return fmt.Errorf("Not available in text mode")
+		}
+		pixelList[i] = pixels
+	}
+
+	gfx.Render.SpriteChannel <- SpriteCommand{
+		Command: "new",
+		Index:   index,
+		W:       w,
+		H:       h,
+		Pixels:  pixelList[0],
+	}
+	return nil
+}
+
+func (gfx *Gfx) DrawSprite(x, y, index, imgIndex int) error {
+	gfx.Render.SpriteLock.Lock()
+	if gfx.VideoMode == GfxMultiColorMode {
+		x *= 2
+	}
+	gfx.Render.Sprites[index].X = int32(x)
+	gfx.Render.Sprites[index].Y = int32(y)
+	gfx.Render.Sprites[index].ImageIndex = int32(imgIndex)
+	gfx.Render.SpriteLock.Unlock()
+	return nil
+}
+
 func (gfx *Gfx) Scroll(dx, dy int) error {
 	if dy > 0 {
 		offset := dy * Width

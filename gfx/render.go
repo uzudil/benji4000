@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
+	"github.com/go-gl/mathgl/mgl32"
 )
 
 const (
@@ -17,12 +18,14 @@ const (
 		layout (location = 0) in vec3 aPos;
 		layout (location = 1) in vec3 aColor;
 		layout (location = 2) in vec2 aTexCoord;
+		
+		uniform mat4 model;
 
 		out vec3 ourColor;
 		out vec2 TexCoord;
 
 		void main() {
-			gl_Position = vec4(aPos, 1.0);
+			gl_Position = model * vec4(aPos, 1.0);
 			ourColor = aColor;
 			TexCoord = aTexCoord;
 		}
@@ -58,37 +61,73 @@ var (
 	}
 )
 
+type Sprite struct {
+	Texture    uint32
+	Model      mgl32.Mat4
+	X          int32
+	Y          int32
+	W          int32
+	H          int32
+	ImageIndex int32
+	Show       bool
+}
+
+type SpriteCommand struct {
+	Command string
+	Index   int
+	W       int
+	H       int
+	X       int
+	Y       int
+	Pixels  []byte
+}
+
 type Render struct {
 	// the video memory
 	PixelMemory [Width * Height * 3]byte
 	Lock        sync.Mutex
+	SpriteLock  sync.Mutex
 	Window      *glfw.Window
 	Program     uint32
 	Vao         uint32
+	Sprites     [8]Sprite
 	// the desired framerate of the bscript code. This is how often the video texture is updated
 	Fps float64
 
 	// input mode channels
-	InputMode  bool
-	StartInput chan int
-	StopInput  chan int
-	CharInput  chan rune
+	InputMode     bool
+	StartInput    chan int
+	StopInput     chan int
+	CharInput     chan rune
+	SpriteChannel chan SpriteCommand
+}
+
+func setTextureParams() {
+	// disable texture filtering for that old-school pixelated look
+	// gl.TexParameterf(gl.TEXTURE_2D, gl.TEXTURE_MAX_ANISOTROPY, 0)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 }
 
 func NewRender(scale int, fullscreen bool) *Render {
 	// make sure this happens first
 	render := &Render{
-		PixelMemory: [Width * Height * 3]byte{},
-		Lock:        sync.Mutex{},
-		Fps:         60,
-		InputMode:   false,
-		StartInput:  make(chan int, 100),
-		StopInput:   make(chan int, 100),
-		CharInput:   make(chan rune, 1000),
+		PixelMemory:   [Width * Height * 3]byte{},
+		Lock:          sync.Mutex{},
+		SpriteLock:    sync.Mutex{},
+		Fps:           60,
+		InputMode:     false,
+		StartInput:    make(chan int, 100),
+		StopInput:     make(chan int, 100),
+		CharInput:     make(chan rune, 1000),
+		SpriteChannel: make(chan SpriteCommand, 1000),
+		Sprites:       [8]Sprite{},
 	}
 	render.Window = initGlfw(render, scale, fullscreen)
 	render.Program = initOpenGL()
-	render.Vao = makeVao()
+	render.Vao = makeVao(screen)
 
 	runtime.LockOSThread()
 
@@ -199,11 +238,11 @@ func compileShader(source string, shaderType uint32) (uint32, error) {
 }
 
 // makeVao initializes and returns a vertex array from the points provided.
-func makeVao() uint32 {
+func makeVao(data []float32) uint32 {
 	var vbo uint32
 	gl.GenBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, 4*len(screen), gl.Ptr(screen), gl.STATIC_DRAW)
+	gl.BufferData(gl.ARRAY_BUFFER, 4*len(data), gl.Ptr(data), gl.STATIC_DRAW)
 
 	var vao uint32
 	gl.GenVertexArrays(1, &vao)
@@ -233,6 +272,36 @@ func (render *Render) GetTicks() float64 {
 	return glfw.GetTime()
 }
 
+func (render *Render) runSpriteCommand(command SpriteCommand) error {
+	sprite := &(render.Sprites[command.Index])
+	if command.Command == "new" {
+		if sprite.Show {
+			panic("Sprite already in use")
+		}
+
+		sprite.W = int32(command.W)
+		sprite.H = int32(command.H)
+		image := command.Pixels
+
+		// update the texture
+		gl.GenTextures(1, &sprite.Texture)
+		gl.BindTexture(gl.TEXTURE_2D, sprite.Texture)
+		setTextureParams()
+		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, sprite.W, sprite.H, 0, gl.RGB, gl.UNSIGNED_BYTE, nil)
+		gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, sprite.W, sprite.H, gl.RGB, gl.UNSIGNED_BYTE, gl.Ptr(&image[0]))
+
+		// translate
+		sprite.Model = mgl32.Ident4().
+			Mul4(mgl32.Scale3D(float32(sprite.W)/float32(Width), float32(sprite.H)/float32(Height), 1))
+
+		// finally, enable it
+		sprite.Show = true
+	} else if command.Command == "move" {
+		// moving sprites via a channel is too slow
+	}
+	return nil
+}
+
 // MainLoop is the main rendering loop where the video ram is sent to the screen.
 func (render *Render) MainLoop() {
 	defer glfw.Terminate()
@@ -241,19 +310,16 @@ func (render *Render) MainLoop() {
 	var texture uint32
 	gl.GenTextures(1, &texture)
 	gl.BindTexture(gl.TEXTURE_2D, texture)
-
-	// disable texture filtering for that old-school pixelated look
-	// gl.TexParameterf(gl.TEXTURE_2D, gl.TEXTURE_MAX_ANISOTROPY, 0)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+	setTextureParams()
 	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, Width, Height, 0, gl.RGB, gl.UNSIGNED_BYTE, nil)
-	// gl.GenerateMipmap(gl.TEXTURE_2D)
 
 	// bind to shader
 	gl.UseProgram(render.Program)
-	gl.Uniform1i(gl.GetUniformLocation(render.Program, gl.Str("ourTexture\x00")), 0)
+	// gl.Uniform1i(gl.GetUniformLocation(render.Program, gl.Str("ourTexture\x00")), 0)
+
+	texUniform := gl.GetUniformLocation(render.Program, gl.Str("ourTexture\x00"))
+	modelUniform := gl.GetUniformLocation(render.Program, gl.Str("model\x00"))
+	identity := mgl32.Ident4()
 
 	var lastTime, delta, lastUpdate float64
 	var nbFrames int
@@ -266,6 +332,11 @@ func (render *Render) MainLoop() {
 			nbFrames = 0
 			lastTime = currentTime
 		}
+
+		gl.UseProgram(render.Program)
+
+		gl.ActiveTexture(gl.TEXTURE0)
+		gl.BindTexture(gl.TEXTURE_2D, texture)
 
 		// Cap bscript code fps to the desired limit
 		// This can mean that the video memory in gfx is not what is shown on screen...
@@ -284,17 +355,34 @@ func (render *Render) MainLoop() {
 		select {
 		case <-render.StartInput:
 			render.InputMode = true
+		case spriteCommand := <-render.SpriteChannel:
+			render.runSpriteCommand(spriteCommand)
 		default:
 			// don't block
 		}
 
 		// gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-		gl.ActiveTexture(gl.TEXTURE0)
-		gl.BindTexture(gl.TEXTURE_2D, texture)
-		gl.UseProgram(render.Program)
-
+		gl.UniformMatrix4fv(modelUniform, 1, false, &identity[0])
+		gl.Uniform1i(texUniform, 0)
 		gl.BindVertexArray(render.Vao)
 		gl.DrawArrays(gl.TRIANGLES, 0, int32(len(screen)/8))
+
+		for _, sprite := range render.Sprites {
+			if sprite.Show {
+				gl.BindTexture(gl.TEXTURE_2D, sprite.Texture)
+				gl.Uniform1i(texUniform, 0)
+
+				render.SpriteLock.Lock()
+				sprite.Model = mgl32.Ident4().
+					Mul4(mgl32.Translate3D(float32(sprite.X-Width/2)/float32(Width/2), float32(sprite.Y-Height/2)/float32(Height/2), 0)).
+					Mul4(mgl32.Scale3D(float32(sprite.W)/float32(Width), float32(sprite.H)/float32(Height), 1))
+				render.SpriteLock.Unlock()
+
+				spriteModel := sprite.Model
+				gl.UniformMatrix4fv(modelUniform, 1, false, &spriteModel[0])
+				gl.DrawArrays(gl.TRIANGLES, 0, int32(len(screen)/8))
+			}
+		}
 
 		glfw.PollEvents()
 		render.Window.SwapBuffers()
