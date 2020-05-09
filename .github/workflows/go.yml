@@ -7,6 +7,17 @@ on:
     branches: [ master ]
 
 jobs:
+  upload-bscript:
+    name: upload bscript src code as an artifact
+    runs-on: macos-latest
+    steps:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+    - name: Upload bscript code
+      uses: actions/upload-artifact@v2
+      with:
+        name: bscript_files
+        path: src/
 
   build-mac:
     name: Build for Mac
