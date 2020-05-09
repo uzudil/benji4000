@@ -28,11 +28,9 @@ def helpMode() {
         "Press space to return"
     ]);
     updateVideo();
-    while(isKeyDown(KeySpace) = false) {
-        
-    }
-    while(isKeyDown(KeySpace)) {
-    }
+    
+    blockUntilKey(KeySpace);
+
     mode := PAINT_MODE;
     setVideoMode(2);
 }

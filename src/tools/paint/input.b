@@ -88,3 +88,10 @@ def handleInput() {
         img := getImage(2, 2, 2 + width, 2 + height);
     }
 }
+
+def blockUntilKey(key) {
+    while(isKeyDown(key) = false) {        
+    }
+    while(isKeyDown(key)) {
+    }
+}
