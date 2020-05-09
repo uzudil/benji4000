@@ -2,8 +2,11 @@ package bscript
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"math"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/alecthomas/participle/lexer"
@@ -64,6 +67,8 @@ type Context struct {
 	Program *Program
 	// the video card
 	Video *gfx.Gfx
+	// The sandbox directory
+	Sandbox *string
 }
 
 func (v *Value) Evaluate(ctx *Context) (interface{}, error) {
@@ -374,29 +379,29 @@ func (e *Expression) Evaluate(ctx *Context) (interface{}, error) {
 }
 
 func (ctx *Context) debug(message string) {
-	ctx.Builtins["print"](ctx, message)
+	fmt.Println(message)
 	indent := "  "
-	ctx.Builtins["print"](ctx, "Constants:")
-	for k, v := range ctx.Consts {
-		ctx.Builtins["print"](ctx, fmt.Sprintf("  %s=%v", k, v))
-	}
-	ctx.Builtins["print"](ctx, "Closures:")
+	// fmt.Println("Constants:")
+	// for k, v := range ctx.Consts {
+	// 	fmt.Println(fmt.Sprintf("  %s=%v", k, v))
+	// }
+	fmt.Println("Closures:")
 	for closure := ctx.Closure; closure != nil; closure = closure.Parent {
-		ctx.Builtins["print"](ctx, "-----------------")
-		ctx.Builtins["print"](ctx, fmt.Sprintf("%sFunction: %s\n", indent, closure.Function))
-		ctx.Builtins["print"](ctx, fmt.Sprintf("%sVars: %v\n", indent, closure.Vars))
-		ctx.Builtins["print"](ctx, fmt.Sprintf("%sDefs: %v\n", indent, closure.Defs))
+		fmt.Println("-----------------")
+		fmt.Println(fmt.Sprintf("%sFunction: %s\n", indent, closure.Function))
+		fmt.Println(fmt.Sprintf("%sVars: %v\n", indent, closure.Vars))
+		fmt.Println(fmt.Sprintf("%sDefs: %v\n", indent, closure.Defs))
 		indent = indent + "  "
 	}
-	ctx.Builtins["print"](ctx, "------------------------------------")
-	ctx.Builtins["print"](ctx, "Runtime Call Stack:")
+	fmt.Println("------------------------------------")
+	fmt.Println("Runtime Call Stack:")
 	indent = "  "
 	for _, runtime := range ctx.RuntimeStack {
-		ctx.Builtins["print"](ctx, fmt.Sprintf("%s%s at %s Vars=%s\n", indent, runtime.Function, runtime.Pos, runtime.Vars))
+		fmt.Println(fmt.Sprintf("%s%s at %s Vars=%s\n", indent, runtime.Function, runtime.Pos, runtime.Vars))
 		indent = indent + "  "
 	}
-	ctx.Builtins["print"](ctx, "------------------------------------")
-	ctx.Builtins["print"](ctx, fmt.Sprintf("Currently: %s\n", ctx.Pos))
+	fmt.Println("------------------------------------")
+	fmt.Println(fmt.Sprintf("Currently: %s\n", ctx.Pos))
 }
 
 func evalBuiltinCall(ctx *Context, c *Call, builtin Builtin, args []interface{}) (interface{}, error) {
@@ -793,14 +798,51 @@ func CreateContext(program *Program) *Context {
 }
 
 func load(source string, showAst *bool) (*Program, error) {
-	r, err := os.Open(source)
+
+	ast := &Program{}
+
+	fi, err := os.Stat(source)
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	switch mode := fi.Mode(); {
+	case mode.IsDir():
+		files, err := ioutil.ReadDir(source)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	ast := &Program{}
-	Parser.Parse(r, ast)
+		// load files into their own programs
+		programs := []*Program{}
+		for _, f := range files {
+			if strings.HasSuffix(f.Name(), ".b") {
+				fmt.Printf("\tLoading %s\n", f.Name())
+				r, err := os.Open(filepath.Join(source, f.Name()))
+				if err != nil {
+					return nil, err
+				}
+				program := &Program{}
+				programs = append(programs, program)
+				Parser.Parse(r, program)
+				r.Close()
+			}
+		}
+
+		// combine into one program (while keeping original positions for debugging)
+		for _, program := range programs {
+			for _, toplevel := range program.TopLevel {
+				ast.TopLevel = append(ast.TopLevel, toplevel)
+			}
+		}
+	case mode.IsRegular():
+		r, err := os.Open(source)
+		if err != nil {
+			return nil, err
+		}
+		Parser.Parse(r, ast)
+		r.Close()
+	}
+
 	if showAst != nil && *showAst {
 		// print the ast
 		repr.Println(ast)
@@ -814,7 +856,7 @@ func Load(source string, showAst *bool, ctx *Context) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ast.init(ctx)
+	return ast.init(ctx, source)
 }
 
 func Run(source string, showAst *bool, ctx *Context, video *gfx.Gfx) (interface{}, error) {
@@ -824,7 +866,7 @@ func Run(source string, showAst *bool, ctx *Context, video *gfx.Gfx) (interface{
 		return nil, err
 	}
 
-	ctx, err = ast.init(ctx)
+	ctx, err = ast.init(ctx, source)
 	if err != nil {
 		return nil, err
 	}
@@ -833,10 +875,22 @@ func Run(source string, showAst *bool, ctx *Context, video *gfx.Gfx) (interface{
 	return ast.Evaluate(ctx)
 }
 
-func (program *Program) init(ctx *Context) (*Context, error) {
+func (program *Program) init(ctx *Context, source string) (*Context, error) {
 	if ctx == nil {
 		ctx = CreateContext(program)
 	}
+
+	// are we in a sandbox (can we save files?)
+	ctx.Sandbox = nil
+	fi, err := os.Stat(source)
+	if err != nil {
+		return nil, err
+	}
+	switch mode := fi.Mode(); {
+	case mode.IsDir():
+		ctx.Sandbox = &source
+	}
+	fmt.Printf("Sandbox? %v\n", (ctx.Sandbox != nil))
 
 	ctx.Program = program
 

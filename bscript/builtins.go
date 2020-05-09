@@ -349,7 +349,7 @@ func toInt(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("First argument should be a number")
 	}
-	return math.Round(n), nil
+	return float64(int(n)), nil
 }
 
 func toRound(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -358,6 +358,19 @@ func toRound(ctx *Context, arg ...interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("First argument should be a number")
 	}
 	return float64(int(n)), nil
+}
+
+func anyKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) {
+	gfx.KeyLock.Lock()
+	b := false
+	for _, v := range gfx.KeyDown {
+		if v {
+			b = true
+			break
+		}
+	}
+	gfx.KeyLock.Unlock()
+	return b, nil
 }
 
 func isKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -557,6 +570,7 @@ func Builtins() map[string]Builtin {
 		"drawImage":     drawImage,
 		"setSprite":     setSprite,
 		"drawSprite":    drawSprite,
+		"anyKeyDown":    anyKeyDown,
 	}
 }
 
