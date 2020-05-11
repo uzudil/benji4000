@@ -3,7 +3,7 @@ const GROUND_STEP = 4;
 const SPEED = 0.01;
 const SPEED_FUEL = 0.05;
 const SPEED_FUEL_DOWN = 0.2;
-const SPEED_Y = 0.05;
+const SPEED_Y = 0.0075;
 const WAIVE_SPEED = 0.15;
 const GRAVITY_SPEED = 0.02;
 const MAX_HEIGHT = 85;
@@ -31,7 +31,8 @@ player := {
     "fuelTimer": -1,
     "carry": 0,
     "saved": 0,
-    "killed": 0
+    "killed": 0,
+    "updowntimer": 0
 };
 title := true;
 info := true;
@@ -73,11 +74,14 @@ def handleInput() {
             turnDir := 0;
         }
     }
-    if(isKeyDown(KeyUp) && player["y"] > 10 && player["fuel"] > 0) {
-        player["y"] := player["y"] - SPEED_Y;
-    }
-    if(isKeyDown(KeyDown)) {
-        player["y"] := player["y"] + SPEED_Y;
+    if(getTicks() > player["updowntimer"]) {
+        if(isKeyDown(KeyUp) && player["y"] > 10 && player["fuel"] > 0) {
+            player["y"] := player["y"] - 1;
+        }
+        if(isKeyDown(KeyDown)) {
+            player["y"] := player["y"] + 1;
+        }
+        player["updowntimer"] := getTicks() + SPEED_Y;
     }
 
     if(getTicks() > player["dirchange"]) {
