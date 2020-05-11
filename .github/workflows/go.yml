@@ -36,9 +36,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: benji4000.mac
-        path: |
-          benji4000
-          src/
+        path: benji4000
         
         
 
@@ -66,6 +64,4 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: benji4000.win
-        path: |
-          benji4000.EXE
-          src/
+        path: benji4000.EXE
