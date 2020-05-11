@@ -18,7 +18,23 @@ jobs:
       with:
         name: bscript_files
         path: src/
-
+    - name: clean and build
+      run: |
+        if [ -d dist/bscript ]; then
+          rm -rf dist/bscript/*
+        else:
+          mkdir -p dist/bscript
+        fi
+        cp -r src/* dist/bscript/
+    - name: git commit and push
+      uses: github-actions-x/commit@v2.6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        push-branch: master
+        commit-message: release
+        files: dist/bscript/*
+        
+      
   build-mac:
     name: Build for Mac
     runs-on: macos-latest
@@ -43,6 +59,22 @@ jobs:
 
     - name: Build
       run: go build -v .
+      
+    - name: clean and build
+      run: |
+        if [ -d dist ]; then
+          rm -rf dist/benji4000.mac
+        else:
+          mkdir -p dist
+        fi
+        cp -r benji4000 dist/benji4000.mac
+    - name: git commit and push
+      uses: github-actions-x/commit@v2.6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        push-branch: master
+        commit-message: release
+        files: dist/benji4000.mac
 
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v2
@@ -71,6 +103,22 @@ jobs:
 
     - name: Build
       run: go build -v .
+      
+    - name: clean and build
+      run: |
+        if [ -d dist ]; then
+          rm -rf dist/benji4000.win
+        else:
+          mkdir -p dist
+        fi
+        cp -r benji4000 dist/benji4000.win
+    - name: git commit and push
+      uses: github-actions-x/commit@v2.6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        push-branch: master
+        commit-message: release
+        files: dist/benji4000.win
 
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v2
