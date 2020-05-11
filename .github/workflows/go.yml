@@ -1,0 +1,127 @@
+name: Go
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  upload-bscript:
+    name: upload bscript src code as an artifact
+    runs-on: macos-latest
+    steps:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+    - name: Upload bscript code
+      uses: actions/upload-artifact@v2
+      with:
+        name: bscript_files
+        path: src/
+    - name: clean and build
+      run: |
+        if [ -d dist/bscript ]; then
+          rm -rf dist/bscript/*
+        else:
+          mkdir -p dist/bscript
+        fi
+        cp -r src/* dist/bscript/
+    - name: git commit and push
+      uses: github-actions-x/commit@v2.6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        push-branch: master
+        commit-message: release
+        files: dist/bscript/*
+        
+      
+  build-mac:
+    name: Build for Mac
+    runs-on: macos-latest
+    steps:
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.13
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Get dependencies
+      run: |
+        go get -v -t -d ./...
+        if [ -f Gopkg.toml ]; then
+            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+            dep ensure
+        fi
+
+    - name: Build
+      run: go build -v .
+      
+    - name: clean and build
+      run: |
+        if [ -d dist ]; then
+          rm -rf dist/benji4000.mac
+        else:
+          mkdir -p dist
+        fi
+        cp -r benji4000 dist/benji4000.mac
+    - name: git commit and push
+      uses: github-actions-x/commit@v2.6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        push-branch: master
+        commit-message: release
+        files: dist/benji4000.mac
+
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: benji4000.mac
+        path: benji4000
+        
+        
+
+  build-win:
+    name: Build for Windows
+    runs-on: windows-latest
+    steps:
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.13
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Get dependencies
+      run: go get -v -t -d ./...
+
+    - name: Build
+      run: go build -v .
+      
+    - name: clean and build
+      run: |
+        if [ -d dist ]; then
+          rm -rf dist/benji4000.win
+        else:
+          mkdir -p dist
+        fi
+        cp -r benji4000 dist/benji4000.win
+    - name: git commit and push
+      uses: github-actions-x/commit@v2.6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        push-branch: master
+        commit-message: release
+        files: dist/benji4000.win
+
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: benji4000.win
+        path: benji4000.EXE
