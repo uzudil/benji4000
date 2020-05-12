@@ -499,8 +499,8 @@ func setColor(ctx *Context, arg ...interface{}) (interface{}, error) {
 }
 
 func checkFilename(filename string) error {
-	if strings.Contains(filename, ".") || strings.Contains(filename, "/") || strings.Contains(filename, "\\") {
-		return fmt.Errorf("Invalid filename")
+	if strings.Contains(filename, "/") || strings.Contains(filename, "\\") {
+		return fmt.Errorf("Invalid filename: %s", filename)
 	}
 	return nil
 }
