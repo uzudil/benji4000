@@ -1,5 +1,8 @@
 const PAINT_MODE = 1;
 const HELP_MODE = 2;
+const NEW_IMAGE_MODE = 3;
+const SAVE_IMAGE_MODE = 4;
+const LOAD_IMAGE_MODE = 5;
 
 mode := PAINT_MODE;
 width := 64;
@@ -10,7 +13,10 @@ color := 1;
 bcolor := 0;
 timer := 0;
 img := {};
+name := "Drawing";
 
+const FILE_NAME = "img.dat";
+composite := {};
 
 def drawColors(x, y) {
     c := 0;
@@ -39,6 +45,7 @@ def paintMode() {
     drawColors(80, 2);
     drawText(2, 100, COLOR_MID_GRAY, COLOR_BLACK, "POS:" + x + "," + y);
     drawText(2, 110, COLOR_MID_GRAY, COLOR_BLACK, "SIZ:" + width + "," + height);
+    drawText(2, 120, COLOR_MID_GRAY, COLOR_BLACK, name);
 
     drawText(80, 30, COLOR_MID_GRAY, COLOR_BLACK, "Help: H");
 
@@ -51,12 +58,31 @@ def paintMode() {
     setPixel(x + 2, y + 2, COLOR_YELLOW);
 }
 
+def switchTo(imageName) {
+    name := imageName;
+    img := composite[name];
+    width := getImageWidth(img);
+    height := getImageHeight(img);
+    x := width/2;
+    y := height/2;
+}
+
 def main() {
     setVideoMode(2);
     setBackground(COLOR_BLACK);    
     clearVideo();
 
-    img := getImage(2, 2, 2 + width, 2 + height);
+    # try to load the file
+    loadedData := load(FILE_NAME);
+    if(loadedData = null) {
+        img := getImage(2, 2, 2 + width, 2 + height);
+        composite[name] := img;
+    } else {
+        # fixme: writing: keys(composite)[0] is an error?
+        composite := loadedData;
+        k := keys(composite);
+        switchTo(k[0]);
+    }
 
     while(true) {
         clearVideo();
@@ -65,6 +91,15 @@ def main() {
         }
         if(mode = HELP_MODE) {
             helpMode();
+        }
+        if(mode = NEW_IMAGE_MODE) {
+            newImageMode();
+        }
+        if(mode = SAVE_IMAGE_MODE) {
+            saveImageMode();
+        }
+        if(mode = LOAD_IMAGE_MODE) {
+            loadImageMode();
         }
         updateVideo();
     }

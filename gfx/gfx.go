@@ -329,6 +329,7 @@ func (gfx *Gfx) GetImage(x, y, x2, y2 int) (map[string]interface{}, error) {
 	h := y2 - y
 	data := make([]byte, w*h)
 	img := map[string]interface{}{
+		"_type_": "image",
 		"width":  w,
 		"height": h,
 		"data":   data,

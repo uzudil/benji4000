@@ -29,6 +29,15 @@ def handleInput() {
     if(isKeyDown(KeyH)) {
         mode := HELP_MODE;
     }
+    if(isKeyDown(KeyN)) {
+        mode := NEW_IMAGE_MODE;
+    }
+    if(isKeyDown(KeyS)) {
+        mode := SAVE_IMAGE_MODE;
+    }
+    if(isKeyDown(KeyL)) {
+        mode := LOAD_IMAGE_MODE;
+    }
     if(isKeyDown(KeyRightBracket)) {
         if(isShiftDown()) {
             bcolor := bcolor + 1;

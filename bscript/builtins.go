@@ -1,9 +1,14 @@
 package bscript
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"math/rand"
+	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/go-gl/glfw/v3.2/glfw"
@@ -283,6 +288,22 @@ func drawImage(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, ctx.Video.DrawImage(i[0], i[1], img)
 }
 
+func getImageWidth(ctx *Context, arg ...interface{}) (interface{}, error) {
+	img, ok := arg[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("First argument should be an image")
+	}
+	return float64(img["width"].(int)), nil
+}
+
+func getImageHeight(ctx *Context, arg ...interface{}) (interface{}, error) {
+	img, ok := arg[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("First argument should be an image")
+	}
+	return float64(img["height"].(int)), nil
+}
+
 func setSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
 	index, ok := arg[0].(float64)
 	if !ok {
@@ -347,7 +368,15 @@ func toAbs(ctx *Context, arg ...interface{}) (interface{}, error) {
 func toInt(ctx *Context, arg ...interface{}) (interface{}, error) {
 	n, ok := arg[0].(float64)
 	if !ok {
-		return nil, fmt.Errorf("First argument should be a number")
+		s, ok := arg[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("First argument should be a number or a string")
+		}
+		i, err := strconv.Atoi(s)
+		if err != nil {
+			i = 0
+		}
+		return float64(i), nil
 	}
 	return float64(int(n)), nil
 }
@@ -469,6 +498,92 @@ func setColor(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, nil
 }
 
+func checkFilename(filename string) error {
+	if strings.Contains(filename, ".") || strings.Contains(filename, "/") || strings.Contains(filename, "\\") {
+		return fmt.Errorf("Invalid filename")
+	}
+	return nil
+}
+
+func saveFile(ctx *Context, arg ...interface{}) (interface{}, error) {
+	if ctx.Sandbox == nil {
+		return nil, fmt.Errorf("Not running in a sandbox")
+	}
+	filename, ok := arg[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("First parameter is the filename")
+	}
+	err := checkFilename(filename)
+	if err != nil {
+		return nil, err
+	}
+	data, ok := arg[1].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Second parameter should be a map")
+	}
+	jsonstr, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return nil, ioutil.WriteFile(filepath.Join(*ctx.Sandbox, filename), []byte(jsonstr), 0644)
+}
+
+// Images need extra processing. Look for images in the loaded data...
+func fixImages(data map[string]interface{}) {
+	for _, v := range data {
+		m, ok := v.(map[string]interface{})
+		if ok {
+			t, ok := m["_type_"]
+			if ok && t == "image" {
+				m["width"] = int(m["width"].(float64))
+				m["height"] = int(m["height"].(float64))
+
+				// decode base64 string
+				s := m["data"].(string)
+				data := make([]byte, base64.StdEncoding.DecodedLen(len(s)))
+				l, _ := base64.StdEncoding.Decode(data, []byte(s))
+				m["data"] = data[:l]
+			}
+			fixImages(m)
+		}
+
+		arr, ok := v.(*[]interface{})
+		if ok {
+			for _, v := range *arr {
+				m, ok := v.(map[string]interface{})
+				if ok {
+					fixImages(m)
+				}
+			}
+		}
+	}
+}
+
+func loadFile(ctx *Context, arg ...interface{}) (interface{}, error) {
+	if ctx.Sandbox == nil {
+		return nil, fmt.Errorf("Not running in a sandbox")
+	}
+	filename, ok := arg[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("First parameter is the filename")
+	}
+	err := checkFilename(filename)
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := ioutil.ReadFile(filepath.Join(*ctx.Sandbox, filename))
+	if err != nil {
+		return nil, nil
+	}
+	data := map[string]interface{}{}
+	err = json.Unmarshal(bytes, &data)
+	if err != nil {
+		return nil, err
+	}
+	fixImages(data)
+	return data, nil
+}
+
 func assert(ctx *Context, arg ...interface{}) (interface{}, error) {
 	a := arg[0]
 	b := arg[1]
@@ -534,43 +649,47 @@ func assert(ctx *Context, arg ...interface{}) (interface{}, error) {
 
 func Builtins() map[string]Builtin {
 	return map[string]Builtin{
-		"print":         print,
-		"input":         input,
-		"len":           length,
-		"keys":          keys,
-		"substr":        substr,
-		"replace":       replace,
-		"debug":         debug,
-		"assert":        assert,
-		"setVideoMode":  setVideoMode,
-		"setPixel":      setPixel,
-		"random":        random,
-		"updateVideo":   updateVideo,
-		"clearVideo":    clearVideo,
-		"drawLine":      drawLine,
-		"drawCircle":    drawCircle,
-		"fillCircle":    fillCircle,
-		"drawRect":      drawRect,
-		"fillRect":      fillRect,
-		"drawText":      drawText,
-		"drawFont":      drawFont,
-		"scroll":        scroll,
-		"trace":         trace,
-		"getTicks":      getTicks,
-		"isKeyDown":     isKeyDown,
-		"setBackground": setBackground,
-		"int":           toInt,
-		"round":         toRound,
-		"abs":           toAbs,
-		"getFont":       getFont,
-		"setFont":       setFont,
-		"getColor":      getColor,
-		"setColor":      setColor,
-		"getImage":      getImage,
-		"drawImage":     drawImage,
-		"setSprite":     setSprite,
-		"drawSprite":    drawSprite,
-		"anyKeyDown":    anyKeyDown,
+		"print":          print,
+		"input":          input,
+		"len":            length,
+		"keys":           keys,
+		"substr":         substr,
+		"replace":        replace,
+		"debug":          debug,
+		"assert":         assert,
+		"setVideoMode":   setVideoMode,
+		"setPixel":       setPixel,
+		"random":         random,
+		"updateVideo":    updateVideo,
+		"clearVideo":     clearVideo,
+		"drawLine":       drawLine,
+		"drawCircle":     drawCircle,
+		"fillCircle":     fillCircle,
+		"drawRect":       drawRect,
+		"fillRect":       fillRect,
+		"drawText":       drawText,
+		"drawFont":       drawFont,
+		"scroll":         scroll,
+		"trace":          trace,
+		"getTicks":       getTicks,
+		"isKeyDown":      isKeyDown,
+		"setBackground":  setBackground,
+		"int":            toInt,
+		"round":          toRound,
+		"abs":            toAbs,
+		"getFont":        getFont,
+		"setFont":        setFont,
+		"getColor":       getColor,
+		"setColor":       setColor,
+		"getImage":       getImage,
+		"drawImage":      drawImage,
+		"getImageWidth":  getImageWidth,
+		"getImageHeight": getImageHeight,
+		"setSprite":      setSprite,
+		"drawSprite":     drawSprite,
+		"anyKeyDown":     anyKeyDown,
+		"save":           saveFile,
+		"load":           loadFile,
 	}
 }
 
