@@ -402,6 +402,19 @@ func anyKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return b, nil
 }
 
+func anyNonHelperKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) {
+	gfx.KeyLock.Lock()
+	b := false
+	for k, v := range gfx.KeyDown {
+		if !(k == glfw.KeyLeftShift || k == glfw.KeyRightShift || k == glfw.KeyLeftAlt || k == glfw.KeyRightAlt || k == glfw.KeyLeftControl || k == glfw.KeyRightControl || k == glfw.KeyLeftSuper || k == glfw.KeyRightSuper) && v {
+			b = true
+			break
+		}
+	}
+	gfx.KeyLock.Unlock()
+	return b, nil
+}
+
 func isKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) {
 	key, ok := arg[0].(float64)
 	if !ok {
@@ -649,47 +662,48 @@ func assert(ctx *Context, arg ...interface{}) (interface{}, error) {
 
 func Builtins() map[string]Builtin {
 	return map[string]Builtin{
-		"print":          print,
-		"input":          input,
-		"len":            length,
-		"keys":           keys,
-		"substr":         substr,
-		"replace":        replace,
-		"debug":          debug,
-		"assert":         assert,
-		"setVideoMode":   setVideoMode,
-		"setPixel":       setPixel,
-		"random":         random,
-		"updateVideo":    updateVideo,
-		"clearVideo":     clearVideo,
-		"drawLine":       drawLine,
-		"drawCircle":     drawCircle,
-		"fillCircle":     fillCircle,
-		"drawRect":       drawRect,
-		"fillRect":       fillRect,
-		"drawText":       drawText,
-		"drawFont":       drawFont,
-		"scroll":         scroll,
-		"trace":          trace,
-		"getTicks":       getTicks,
-		"isKeyDown":      isKeyDown,
-		"setBackground":  setBackground,
-		"int":            toInt,
-		"round":          toRound,
-		"abs":            toAbs,
-		"getFont":        getFont,
-		"setFont":        setFont,
-		"getColor":       getColor,
-		"setColor":       setColor,
-		"getImage":       getImage,
-		"drawImage":      drawImage,
-		"getImageWidth":  getImageWidth,
-		"getImageHeight": getImageHeight,
-		"setSprite":      setSprite,
-		"drawSprite":     drawSprite,
-		"anyKeyDown":     anyKeyDown,
-		"save":           saveFile,
-		"load":           loadFile,
+		"print":               print,
+		"input":               input,
+		"len":                 length,
+		"keys":                keys,
+		"substr":              substr,
+		"replace":             replace,
+		"debug":               debug,
+		"assert":              assert,
+		"setVideoMode":        setVideoMode,
+		"setPixel":            setPixel,
+		"random":              random,
+		"updateVideo":         updateVideo,
+		"clearVideo":          clearVideo,
+		"drawLine":            drawLine,
+		"drawCircle":          drawCircle,
+		"fillCircle":          fillCircle,
+		"drawRect":            drawRect,
+		"fillRect":            fillRect,
+		"drawText":            drawText,
+		"drawFont":            drawFont,
+		"scroll":              scroll,
+		"trace":               trace,
+		"getTicks":            getTicks,
+		"isKeyDown":           isKeyDown,
+		"setBackground":       setBackground,
+		"int":                 toInt,
+		"round":               toRound,
+		"abs":                 toAbs,
+		"getFont":             getFont,
+		"setFont":             setFont,
+		"getColor":            getColor,
+		"setColor":            setColor,
+		"getImage":            getImage,
+		"drawImage":           drawImage,
+		"getImageWidth":       getImageWidth,
+		"getImageHeight":      getImageHeight,
+		"setSprite":           setSprite,
+		"drawSprite":          drawSprite,
+		"anyKeyDown":          anyKeyDown,
+		"anyNonHelperKeyDown": anyNonHelperKeyDown,
+		"save":                saveFile,
+		"load":                loadFile,
 	}
 }
 

@@ -33,11 +33,12 @@ def main() {
     img := load("img.dat");
 
     # create sprites
-    setSprite(SPRITE_INDEX, [img["man"]]);
-    setSprite(SPRITE_INDEX + 1, [img["man"]]);
-    setSprite(SPRITE_INDEX + 2, [img["man"]]);
-    setSprite(SPRITE_INDEX + 3, [img["man"]]);
-    setSprite(SPRITE_INDEX + 4, [img["man"]]);
+    imglist := [img["man1"], img["man2"], img["man3"], img["man2"]];
+    setSprite(SPRITE_INDEX, imglist);
+    setSprite(SPRITE_INDEX + 1, imglist);
+    setSprite(SPRITE_INDEX + 2, imglist);
+    setSprite(SPRITE_INDEX + 3, imglist);
+    setSprite(SPRITE_INDEX + 4, imglist);
 
     #clearVideo();
     drawText(10, 180, COLOR_WHITE, COLOR_BLACK, "Press SPACE");
@@ -59,10 +60,10 @@ def main() {
             timer := getTicks() + 0.005;
             if(getTicks() > imgTimer) {
                 imgIndex := imgIndex + 1;
-                if(imgIndex >= 1) {
+                if(imgIndex >= len(imglist)) {
                     imgIndex := 0;
                 }
-                imgTimer := getTicks() + 0.25;
+                imgTimer := getTicks() + 0.1;
             }
         }
 

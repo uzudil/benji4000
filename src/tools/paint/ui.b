@@ -23,6 +23,8 @@ def helpMode() {
         "new image: N",
         "save image: S",        
         "load image: L",
+        "clone/copy image: C",
+        "delete image: D",
         "fill: F",
         "fill background: shift + F",
         "Press space to return"
@@ -88,6 +90,22 @@ def saveImageMode() {
     setVideoMode(2);
 }
 
+def inputImageName(prompt, mustIncludeName) {
+    s := input(prompt);
+    while((mustIncludeName = true && composite[s] = null) || (mustIncludeName = false && composite[s] != null)) {
+        print("Invalid name. Image names are:");
+        k := keys(composite);
+        i := 0;
+        while(i < len(k)) {
+            print("\t" + k[i]);
+            i := i + 1;
+        }
+        print(" ");
+        s := input(prompt);
+    }
+    return s;
+}
+
 def loadImageMode() {
     # save the work so far
     composite[name] := img;
@@ -96,20 +114,57 @@ def loadImageMode() {
     setBackground(COLOR_LIGHT_BLUE);    
     clearVideo();
     
-    s := input("Load image name? ");
-    while(composite[s] = null) {
-        print("Invalid name. Valid names are:");
-        k := keys(composite);
-        i := 0;
-        while(i < len(k)) {
-            print("\t" + k[i]);
-            i := i + 1;
-        }
-        print(" ");
-        s := input("Load image name? ");
-    }
+    s := inputImageName("Load image name? ", true);
     switchTo(s);
 
+    mode := PAINT_MODE;
+    setVideoMode(2);
+    setBackground(COLOR_BLACK);    
+    clearVideo();
+}
+
+def deleteImageMode() {
+    # save the work so far
+    composite[name] := img;
+
+    setVideoMode(0);
+    setBackground(COLOR_LIGHT_BLUE);    
+    clearVideo();
+    
+    s := inputImageName("Delete which image? ", true);
+    del composite[s];
+    k := keys(composite);
+    if(len(k) > 0) {
+        switchTo(k[0]);
+    }
+
+    mode := PAINT_MODE;
+    setVideoMode(2);
+    setBackground(COLOR_BLACK);
+    clearVideo();
+    if(len(k) = 0) {
+        width := 64;
+        height := 64;
+        x := width / 2;
+        y := height / 2;
+        img := getImage(2, 2, 2 + width, 2 + height);
+        name := "Drawing";
+        composite[name] := img;
+    }
+}
+
+def cloneImageMode() {
+    # save the work so far
+    composite[name] := img;
+
+    setVideoMode(0);
+    setBackground(COLOR_LIGHT_BLUE);    
+    clearVideo();
+    
+    s := inputImageName("Choose an unused image name: ", false);
+    name := s;
+    composite[name] := img;
+    
     mode := PAINT_MODE;
     setVideoMode(2);
     setBackground(COLOR_BLACK);    

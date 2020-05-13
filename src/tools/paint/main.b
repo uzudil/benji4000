@@ -3,6 +3,8 @@ const HELP_MODE = 2;
 const NEW_IMAGE_MODE = 3;
 const SAVE_IMAGE_MODE = 4;
 const LOAD_IMAGE_MODE = 5;
+const CLONE_IMAGE_MODE = 6;
+const DELETE_IMAGE_MODE = 7;
 
 mode := PAINT_MODE;
 width := 64;
@@ -17,6 +19,10 @@ name := "Drawing";
 
 const FILE_NAME = "img.dat";
 composite := {};
+
+# 0-no pen, 1-draw, 2-erase
+pendown := 0; 
+const PEN = [ "move", "draw", "erase" ];
 
 def drawColors(x, y) {
     c := 0;
@@ -46,6 +52,8 @@ def paintMode() {
     drawText(2, 100, COLOR_MID_GRAY, COLOR_BLACK, "POS:" + x + "," + y);
     drawText(2, 110, COLOR_MID_GRAY, COLOR_BLACK, "SIZ:" + width + "," + height);
     drawText(2, 120, COLOR_MID_GRAY, COLOR_BLACK, name);
+    drawText(2, 130, COLOR_MID_GRAY, COLOR_BLACK, "Pen:" + PEN[pendown]);
+    drawText(2, 140, COLOR_MID_GRAY, COLOR_BLACK, "Clone:" + img["clone"]);    
 
     drawText(80, 30, COLOR_MID_GRAY, COLOR_BLACK, "Help: H");
 
@@ -100,6 +108,12 @@ def main() {
         }
         if(mode = LOAD_IMAGE_MODE) {
             loadImageMode();
+        }
+        if(mode = CLONE_IMAGE_MODE) {
+            cloneImageMode();
+        }
+        if(mode = DELETE_IMAGE_MODE) {
+            deleteImageMode();
         }
         updateVideo();
     }

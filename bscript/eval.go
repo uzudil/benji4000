@@ -269,6 +269,17 @@ func (o *OpCmp) Evaluate(ctx *Context, lhs interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if lhs == nil || rhs == nil {
+		res := lhs == rhs
+		switch o.Operator {
+		case "=":
+			return res, nil
+		case "!=":
+			return !res, nil
+		}
+	}
+
 	switch lhs := lhs.(type) {
 	case float64:
 		rhs, ok := rhs.(float64)
@@ -320,15 +331,6 @@ func (o *OpCmp) Evaluate(ctx *Context, lhs interface{}) (interface{}, error) {
 			return lhs != rhs, nil
 		}
 	default:
-		if lhs == nil || rhs == nil {
-			res := lhs == rhs
-			switch o.Operator {
-			case "=":
-				return res, nil
-			case "!=":
-				return !res, nil
-			}
-		}
 		return nil, lexer.Errorf(o.Pos, "lhs of %s must be a number, string, boolean or null", o.Operator)
 	}
 	panic("unreachable")

@@ -12,17 +12,28 @@ def getCursorSpeed() {
     }
 }
 
+# the first pause is longer allowing a user to move per-pixel
+const FIRST_STEP = 0.5;
+const SECOND_STEP = 0.05;
+keyDownStep := FIRST_STEP;
+
 def handleInput() {
 
-    # start timer when first key is down
-    if(anyKeyDown()) {
+    if(anyNonHelperKeyDown()) {
+        # while a key is down, use timer
         if(getTicks() < timer) {
             return 0;
         }
-        timer := getTicks() + 0.1;
+        timer := getTicks() + keyDownStep;
+        if(keyDownStep = FIRST_STEP) {
+            keyDownStep := SECOND_STEP;
+        }
     } else {
         # reset timer on key up
-        timer := 0;
+        if(timer != 0) {
+            timer := 0;
+            keyDownStep := FIRST_STEP;
+        }
         return 0;
     }
 
@@ -37,6 +48,12 @@ def handleInput() {
     }
     if(isKeyDown(KeyL)) {
         mode := LOAD_IMAGE_MODE;
+    }
+    if(isKeyDown(KeyC)) {
+        mode := CLONE_IMAGE_MODE;
+    }
+    if(isKeyDown(KeyD)) {
+        mode := DELETE_IMAGE_MODE;
     }
     if(isKeyDown(KeyRightBracket)) {
         if(isShiftDown()) {
@@ -89,8 +106,23 @@ def handleInput() {
         }
     }
     if(isKeyDown(KeySpace)) {
-        c := color;
         if(isShiftDown()) {
+            if(pendown != 2) {
+                pendown := 2;
+            } else {
+                pendown := 0;
+            }
+        } else {
+            if(pendown != 1) {
+                pendown := 1;
+            } else {
+                pendown := 0;
+            }
+        }
+    }
+    if(pendown >= 1) {
+        c := color;
+        if(pendown = 2) {
             c := bcolor;
         }
         setPixel(x + 2, y + 2, c);
