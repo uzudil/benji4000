@@ -241,6 +241,51 @@ func (gfx *Gfx) DrawFont(x, y int, ch rune, fg, bg uint8) error {
 	return nil
 }
 
+func (gfx *Gfx) FloodFill(x, y int, fg uint8) error {
+	return gfx.floodFill(x, y, fg, gfx.GetPixel(x, y))
+}
+
+func (gfx *Gfx) floodFill(x, y int, fg, bg uint8) error {
+	for dx := -1; dx <= 1; dx++ {
+		for dy := -1; dy <= 1; dy++ {
+			if dx == 0 || dy == 0 {
+				xp := x + dx
+				yp := y + dy
+				if xp >= 0 && xp < gfx.getPixelWidth() && yp >= 0 && yp < gfx.getPixelHeight() && gfx.GetPixel(xp, yp) == bg {
+					gfx.SetPixel(xp, yp, fg)
+					gfx.floodFill(xp, yp, fg, bg)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (gfx *Gfx) getPixelWidth() int {
+	if gfx.VideoMode == GfxMultiColorMode {
+		return Width / 2
+	}
+	return Width
+}
+
+func (gfx *Gfx) getPixelHeight() int {
+	return Height
+}
+
+func (gfx *Gfx) GetPixel(x, y int) uint8 {
+	switch {
+	case gfx.VideoMode == GfxHiresMode:
+		if x >= 0 && y >= 0 && x < Width && y < Height {
+			return gfx.VideoMemory[y*Width+x]
+		}
+	case gfx.VideoMode == GfxMultiColorMode:
+		if x >= 0 && y >= 0 && x < Width/2 && y < Height {
+			return gfx.VideoMemory[y*Width+x*2]
+		}
+	}
+	return 0
+}
+
 func (gfx *Gfx) SetPixel(x, y int, fg uint8) error {
 	switch {
 	case gfx.VideoMode == GfxTextMode:
@@ -422,7 +467,7 @@ func (gfx *Gfx) SetSprite(index int, imgs []map[string]interface{}) error {
 	return nil
 }
 
-func (gfx *Gfx) DrawSprite(x, y, index, imgIndex int) error {
+func (gfx *Gfx) DrawSprite(x, y, index, imgIndex, flipX, flipY int) error {
 	gfx.Render.SpriteLock.Lock()
 	if gfx.VideoMode == GfxMultiColorMode {
 		x *= 2
@@ -430,6 +475,8 @@ func (gfx *Gfx) DrawSprite(x, y, index, imgIndex int) error {
 	gfx.Render.Sprites[index].X = int32(x)
 	gfx.Render.Sprites[index].Y = int32(y)
 	gfx.Render.Sprites[index].ImageIndex = int32(imgIndex)
+	gfx.Render.Sprites[index].FlipX = int32(flipX)
+	gfx.Render.Sprites[index].FlipY = int32(flipY)
 	gfx.Render.SpriteLock.Unlock()
 	return nil
 }

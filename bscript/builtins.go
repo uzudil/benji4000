@@ -325,11 +325,19 @@ func setSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
 }
 
 func drawSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
-	i, err := intArgs(ctx, 4, arg)
+	i, err := intArgs(ctx, 6, arg)
 	if err != nil {
 		return nil, err
 	}
-	return nil, ctx.Video.DrawSprite(i[0], i[1], i[2], i[3])
+	return nil, ctx.Video.DrawSprite(i[0], i[1], i[2], i[3], i[4], i[5])
+}
+
+func flood(ctx *Context, arg ...interface{}) (interface{}, error) {
+	i, err := intArgs(ctx, 3, arg)
+	if err != nil {
+		return nil, err
+	}
+	return nil, ctx.Video.FloodFill(i[0], i[1], uint8(i[2]))
 }
 
 func clearVideo(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -700,6 +708,7 @@ func Builtins() map[string]Builtin {
 		"getImageHeight":      getImageHeight,
 		"setSprite":           setSprite,
 		"drawSprite":          drawSprite,
+		"flood":               flood,
 		"anyKeyDown":          anyKeyDown,
 		"anyNonHelperKeyDown": anyNonHelperKeyDown,
 		"save":                saveFile,

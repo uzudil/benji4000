@@ -59,7 +59,7 @@ def main() {
             # draw the sprite
             i := 0;
             while(i < 4) {
-                drawSprite(pos[i]["x"], pos[i]["y"], SPRITE_INDEX + i, imgIndex);
+                drawSprite(pos[i]["x"], pos[i]["y"], SPRITE_INDEX + i, imgIndex, 0, 0);
                 move(pos[i]);
                 i:=i+1;
             }
@@ -74,6 +74,6 @@ def main() {
         }
 
         # draw another one so we can see the animation
-        drawSprite(30, 150, SPRITE_INDEX + 4, imgIndex);
+        drawSprite(30, 150, SPRITE_INDEX + 4, imgIndex, 0, 0);
     }
 }

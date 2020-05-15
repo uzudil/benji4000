@@ -105,6 +105,10 @@ def handleInput() {
             x := x - width;
         }
     }
+    if(isKeyDown(KeyF)) {
+        flood(x + 2, y + 2, color);
+        img := getImage(2, 2, 2 + width, 2 + height);
+    }
     if(isKeyDown(KeySpace)) {
         if(isShiftDown()) {
             if(pendown != 2) {

@@ -39,10 +39,22 @@ const (
 		in vec2 TexCoord;
 
 		uniform sampler2D ourTexture;
+		uniform int flipX;
+		uniform int flipY;
+
+		float tx, ty;
 
 		void main()
 		{
-			FragColor = texture(ourTexture, TexCoord);
+			tx = TexCoord.x;
+			if(flipX != 0) {
+				tx = 1 - tx;
+			}
+			ty = TexCoord.y;
+			if(flipY != 0) {
+				ty = 1 - ty;
+			}
+			FragColor = texture(ourTexture, vec2(tx, ty));
 		}
 	` + "\x00"
 )
@@ -70,6 +82,8 @@ type Sprite struct {
 	H          int32
 	ImageIndex int32
 	Show       bool
+	FlipX      int32
+	FlipY      int32
 }
 
 type SpriteCommand struct {
@@ -320,6 +334,8 @@ func (render *Render) MainLoop() {
 	// gl.Uniform1i(gl.GetUniformLocation(render.Program, gl.Str("ourTexture\x00")), 0)
 
 	texUniform := gl.GetUniformLocation(render.Program, gl.Str("ourTexture\x00"))
+	flipXUniform := gl.GetUniformLocation(render.Program, gl.Str("flipX\x00"))
+	flipYUniform := gl.GetUniformLocation(render.Program, gl.Str("flipY\x00"))
 	modelUniform := gl.GetUniformLocation(render.Program, gl.Str("model\x00"))
 	identity := mgl32.Ident4()
 
@@ -366,6 +382,8 @@ func (render *Render) MainLoop() {
 		// gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 		gl.UniformMatrix4fv(modelUniform, 1, false, &identity[0])
 		gl.Uniform1i(texUniform, 0)
+		gl.Uniform1i(flipXUniform, 0)
+		gl.Uniform1i(flipYUniform, 0)
 		gl.BindVertexArray(render.Vao)
 		gl.DrawArrays(gl.TRIANGLES, 0, int32(len(screen)/8))
 
@@ -374,6 +392,8 @@ func (render *Render) MainLoop() {
 			if sprite.Show {
 				gl.BindTexture(gl.TEXTURE_2D, sprite.Textures[sprite.ImageIndex])
 				gl.Uniform1i(texUniform, 0)
+				gl.Uniform1i(flipXUniform, sprite.FlipX)
+				gl.Uniform1i(flipYUniform, sprite.FlipY)
 
 				sprite.Model = mgl32.Ident4().
 					Mul4(mgl32.Translate3D(float32(sprite.X-Width/2)/float32(Width/2), -float32(sprite.Y-Height/2)/float32(Height/2), 0)).
