@@ -22,7 +22,7 @@ rooms := [
     ],
     [
         "xxxxxxxxxxxxxxxxxxxx",
-        "d..................x",
+        "d................k.x",
         "xxxx...............x",
         "xk.................x",
         "xxxxxxxx...........x",
@@ -30,7 +30,7 @@ rooms := [
         "xxx................x",
         "xxxxxxxxxxxxx......x",
         "xk.............xxxxx",
-        "xxxx.......k.......x",
+        "xxxx...............x",
         "x.........xxx......x",
         "xxxxxxxxxxxxxxxxxxxx"
     ]
