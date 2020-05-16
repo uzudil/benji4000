@@ -25,7 +25,6 @@ player := {
     "gravity": 0
 };
 img := null;
-imglist := null;
 
 def animatePlayer() {
     player["sinceMove"] := player["sinceMove"] + 1;
@@ -33,7 +32,7 @@ def animatePlayer() {
         player["speed"] := SPEED_FAST;
     }
     player["imgIndex"] := player["imgIndex"] + (player["speed"] / SPEED_SLOW);
-    if(player["imgIndex"] >= len(imglist)) {
+    if(player["imgIndex"] >= 4) {
         player["imgIndex"] := 0;
     }
 }
@@ -46,8 +45,7 @@ def initGame() {
     img := load("img.dat");
 
     # create sprites
-    imglist := [img["pl1"], img["pl2"], img["pl3"], img["pl2"]];
-    setSprite(player["sprite"], imglist);
+    setSprite(player["sprite"], [img["pl1"], img["pl2"], img["pl3"], img["pl2"]]);
 }
 
 def movePlayer(dir) {
@@ -67,7 +65,10 @@ def movePlayer(dir) {
         player["x"] := player["x"] + 1;
         player["flipX"] := 1;
     }
-    if(checkBlocks()) {
+    if(checkBlocks(player["x"] - PLAYER_WIDTH/2, 
+            player["y"] - PLAYER_HEIGHT/2, 
+            player["x"] + PLAYER_WIDTH/2, 
+            player["y"] + PLAYER_HEIGHT/2)) {
         player["x"] := px;
         player["y"] := py;
         return false;
@@ -139,6 +140,8 @@ def main() {
             player["sinceMove"] := 0;
             player["timer"] := 0;
         }
+
+        moveEnemies();
 
         if(player["x"] != ox || player["y"] != oy) {
             drawSprite(player["x"], player["y"], player["sprite"], player["imgIndex"], player["flipX"], 0);

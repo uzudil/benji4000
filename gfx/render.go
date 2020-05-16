@@ -2,7 +2,6 @@ package gfx
 
 import (
 	"fmt"
-	"log"
 	"runtime"
 	"strings"
 	"sync"
@@ -208,8 +207,8 @@ func initOpenGL() uint32 {
 	if err := gl.Init(); err != nil {
 		panic(err)
 	}
-	version := gl.GoStr(gl.GetString(gl.VERSION))
-	log.Println("OpenGL version", version)
+	// version := gl.GoStr(gl.GetString(gl.VERSION))
+	// log.Println("OpenGL version", version)
 
 	vertexShader, err := compileShader(vertexShaderSource, gl.VERTEX_SHADER)
 	if err != nil {
