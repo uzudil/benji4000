@@ -6,8 +6,8 @@ const UP = 1;
 const DOWN = 2;
 const LEFT = 3;
 const RIGHT = 4;
-const PLAYER_WIDTH = 16;
-const PLAYER_HEIGHT = 24;
+const PLAYER_WIDTH = 8;
+const PLAYER_HEIGHT = 16;
 const BLOCK_WIDTH = 8;
 const BLOCK_HEIGHT = 16;
 
@@ -22,9 +22,11 @@ player := {
     "flipX": 0,
     "jump": 0,
     "jumpMove": 0,
-    "gravity": 0
+    "gravity": 0,
+    "keys": 0
 };
 img := null;
+gameWon := false;
 
 def animatePlayer() {
     player["sinceMove"] := player["sinceMove"] + 1;
@@ -45,7 +47,9 @@ def initGame() {
     img := load("img.dat");
 
     # create sprites
-    setSprite(player["sprite"], [img["pl1"], img["pl2"], img["pl3"], img["pl2"]]);
+    setSprite(player["sprite"], [img["p1"], img["p2"], img["p3"], img["p2"]]);
+    setSprite(1, [img["en1"], img["en2"]]);
+    setSprite(2, [img["en1"], img["en2"]]);
 }
 
 def movePlayer(dir) {
@@ -66,7 +70,7 @@ def movePlayer(dir) {
         player["flipX"] := 1;
     }
     if(checkBlocks(player["x"] - PLAYER_WIDTH/2, 
-            player["y"] - PLAYER_HEIGHT/2, 
+            player["y"] - PLAYER_HEIGHT/4, 
             player["x"] + PLAYER_WIDTH/2, 
             player["y"] + PLAYER_HEIGHT/2)) {
         player["x"] := px;
@@ -76,13 +80,50 @@ def movePlayer(dir) {
     return true;
 }
 
+def pickupKeys() {
+    if(checkKeys(player["x"] - PLAYER_WIDTH/2, 
+            player["y"] - PLAYER_HEIGHT/2, 
+            player["x"] + PLAYER_WIDTH/2, 
+            player["y"] + PLAYER_HEIGHT/2)) {
+        player["keys"] := player["keys"] + 1;
+        if(player["keys"] >= 3) {
+            openGate();
+        }
+    }
+}
+
+def checkLevelDone() {
+    if(checkDoors(player["x"] - PLAYER_WIDTH/2, 
+            player["y"] - PLAYER_HEIGHT/2, 
+            player["x"] + PLAYER_WIDTH/2, 
+            player["y"] + PLAYER_HEIGHT/2)) {
+
+        # go to next room
+        roomIndex := roomIndex + 1;
+        if(roomIndex < len(rooms)) {
+            startLevel();    
+        } else {
+            gameWon := true;
+        }
+    }
+}
+
+def startLevel() {
+    clearVideo();
+    player["x"] := 80;
+    player["y"] := 88;
+    player["keys"] := 0;
+    drawLevel();
+    initEnemies();
+    updateVideo();
+}
+
 def main() {
     initGame();
-    drawLevel();
-    updateVideo();
+    startLevel();
 
     falling := false;
-    while(isKeyDown(KeyEscape) != true) {
+    while(isKeyDown(KeyEscape) != true && gameWon = false) {
 
         ox := player["x"];
         oy := player["y"];
@@ -142,6 +183,8 @@ def main() {
         }
 
         moveEnemies();
+        pickupKeys();
+        checkLevelDone();
 
         if(player["x"] != ox || player["y"] != oy) {
             drawSprite(player["x"], player["y"], player["sprite"], player["imgIndex"], player["flipX"], 0);
