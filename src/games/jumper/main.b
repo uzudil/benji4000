@@ -60,6 +60,15 @@ def drawLevel() {
         }
         y := y + 24;
     }
+    y := 20;
+    while(y > -20) {
+        x := 0;
+        while(x < 160) {
+            drawImage(x, y, img["rock" + int(random() * 2 + 1)]);
+            x := x + 24;
+        }
+        y := y - 24;
+    }
     updateVideo();
 }
 
