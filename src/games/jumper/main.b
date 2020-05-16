@@ -1,6 +1,6 @@
 const SPEED_SLOW = 0.1;
 const SPEED_FAST = 0.05;
-const JUMP_AIR_TIME = 0.6;
+const JUMP_AIR_TIME = 1;
 const VERTICAL_SPEED = 0.0175;
 const UP = 1;
 const DOWN = 2;
@@ -26,8 +26,6 @@ player := {
 };
 img := null;
 imglist := null;
-roomIndex := 0;
-blocks := [];
 
 def animatePlayer() {
     player["sinceMove"] := player["sinceMove"] + 1;
@@ -52,49 +50,6 @@ def initGame() {
     setSprite(player["sprite"], imglist);
 }
 
-def drawLevel() {    
-    room := rooms[roomIndex];
-    blocks := [];
-    row := 0; 
-    while(row < len(room)) {
-        x := 0;
-        while(x < len(room[row])) {
-            c := substr(room[row], x, 1);
-            if(c = "x") {
-                drawImage(x * BLOCK_WIDTH, row * BLOCK_HEIGHT, img["b1"]);
-                blocks[len(blocks)] := [
-                    x * BLOCK_WIDTH, row * BLOCK_HEIGHT,
-                    (x + 1) * BLOCK_WIDTH, (row + 1) * BLOCK_HEIGHT
-                ];
-            }
-            x := x + 1;
-        }
-        row := row + 1;
-    }
-    updateVideo();
-}
-
-# todo: implement in go with quad-tree
-def checkBlocks() {
-    i := 0;
-    while(i < len(blocks)) {
-        if(isOverlap(
-            player["x"] - PLAYER_WIDTH/2, 
-            player["y"] - PLAYER_HEIGHT/2, 
-            player["x"] + PLAYER_WIDTH/2, 
-            player["y"] + PLAYER_HEIGHT/2, 
-            blocks[i][0],
-            blocks[i][1],
-            blocks[i][2],
-            blocks[i][3])
-        ) {
-            return true;
-        }
-        i := i + 1;
-    }
-    return false;
-}
-
 def movePlayer(dir) {
     px := player["x"];
     py := player["y"];
@@ -106,9 +61,11 @@ def movePlayer(dir) {
     }
     if(dir = LEFT) {
         player["x"] := player["x"] - 1;
+        player["flipX"] := 0;
     }
     if(dir = RIGHT) {
         player["x"] := player["x"] + 1;
+        player["flipX"] := 1;
     }
     if(checkBlocks()) {
         player["x"] := px;
@@ -121,17 +78,24 @@ def movePlayer(dir) {
 def main() {
     initGame();
     drawLevel();
-    first := true;
+    updateVideo();
+
     falling := false;
     while(isKeyDown(KeyEscape) != true) {
 
-        drawPlayer := first;
-        first := false;
+        ox := player["x"];
+        oy := player["y"];
+
         # jump
         if(getTicks() < player["jump"]) {
             if(getTicks() > player["jumpMove"]) {
-                drawPlayer := movePlayer(UP);
-                player["jumpMove"] := getTicks() + VERTICAL_SPEED;
+                m := movePlayer(UP);
+                if(m) {
+                    player["jumpMove"] := getTicks() + VERTICAL_SPEED;
+                } else {
+                    player["jump"] := 0;
+                    player["jumpMove"] := 0;
+                }
             }
         } else {
             player["jump"] := 0;
@@ -141,31 +105,27 @@ def main() {
         # gravity
         if(player["jump"] = 0) {
             if(getTicks() > player["gravity"]) {
-                drawPlayer := movePlayer(DOWN);
-                falling := drawPlayer;
+                falling := movePlayer(DOWN);
                 player["gravity"] := getTicks() + VERTICAL_SPEED;
             }
         } else {
             player["gravity"] := 0;
         }
 
-        # input handling + movement
+        # input handling
         if(anyKeyDown()) {        
             if(getTicks() > player["timer"]) {
                 move := false;
                 if(isKeyDown(KeyLeft)) {
                     move := movePlayer(LEFT);
-                    player["flipX"] := 0;
                 }
                 if(isKeyDown(KeyRight)) {
                     move := movePlayer(RIGHT);
-                    player["flipX"] := 1;
                 }
                 if(isKeyDown(KeySpace) && player["jump"] = 0 && falling = false) {
                     player["jump"] := getTicks() + JUMP_AIR_TIME;
                 }
                 if(move) {
-                    drawPlayer := true;
                     animatePlayer();
                 } else {
                     player["speed"] := SPEED_SLOW;
@@ -180,7 +140,7 @@ def main() {
             player["timer"] := 0;
         }
 
-        if(drawPlayer) {
+        if(player["x"] != ox || player["y"] != oy) {
             drawSprite(player["x"], player["y"], player["sprite"], player["imgIndex"], player["flipX"], 0);
         }
     }

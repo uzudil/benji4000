@@ -1,7 +1,7 @@
 # todo: move to go
 # is point (x,y) inside rect (rx,ry,rx2,ry2) ?
 def isInclude(x, y, rx, ry, rx2, ry2) {
-    return x >= rx && x < rx2 && y >= ry && y < ry2;
+    return x >= rx && x <= rx2 && y >= ry && y <= ry2;
 }
 
 # todo: move to go
