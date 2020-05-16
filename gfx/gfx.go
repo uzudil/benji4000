@@ -430,26 +430,42 @@ func (gfx *Gfx) SetSprite(index int, imgs []map[string]interface{}) error {
 
 	pixelList := make([][]byte, len(imgs))
 
+	var alpha byte
 	for i, img := range imgs {
 		data := img["data"].([]byte)
-		pixels := make([]byte, w*h*3)
+		pixels := make([]byte, w*h*4)
 		if gfx.VideoMode == GfxHiresMode {
 			for i := 0; i < len(data); i++ {
-				idx := i * 3
+				idx := i * 4
 				pixels[idx] = gfx.Colors[data[i]*3]
 				pixels[idx+1] = gfx.Colors[data[i]*3+1]
 				pixels[idx+2] = gfx.Colors[data[i]*3+2]
+				alpha = 1
+				if data[i] == 0 {
+					alpha = 0
+				}
+				pixels[idx+3] = alpha
 			}
 		} else if gfx.VideoMode == GfxMultiColorMode {
 			for i := 0; i < len(data); i++ {
-				idx := i * 2 * 3
+				idx := i * 2 * 4
 				pixels[idx] = gfx.Colors[data[i]*3]
 				pixels[idx+1] = gfx.Colors[data[i]*3+1]
 				pixels[idx+2] = gfx.Colors[data[i]*3+2]
-				idx = ((i * 2) + 1) * 3
+				alpha = 1
+				if data[i] == 0 {
+					alpha = 0
+				}
+				pixels[idx+3] = alpha
+				idx = ((i * 2) + 1) * 4
 				pixels[idx] = gfx.Colors[data[i]*3]
 				pixels[idx+1] = gfx.Colors[data[i]*3+1]
 				pixels[idx+2] = gfx.Colors[data[i]*3+2]
+				alpha = 1
+				if data[i] == 0 {
+					alpha = 0
+				}
+				pixels[idx+3] = alpha
 			}
 		} else {
 			return fmt.Errorf("Not available in text mode")
@@ -543,9 +559,10 @@ func (gfx *Gfx) ClearVideo() error {
 func (gfx *Gfx) UpdateVideo() error {
 	gfx.Render.Lock.Lock()
 	for index, colorIndex := range gfx.VideoMemory {
-		gfx.Render.PixelMemory[index*3] = gfx.Colors[colorIndex*3]
-		gfx.Render.PixelMemory[index*3+1] = gfx.Colors[colorIndex*3+1]
-		gfx.Render.PixelMemory[index*3+2] = gfx.Colors[colorIndex*3+2]
+		gfx.Render.PixelMemory[index*4] = gfx.Colors[colorIndex*3]
+		gfx.Render.PixelMemory[index*4+1] = gfx.Colors[colorIndex*3+1]
+		gfx.Render.PixelMemory[index*4+2] = gfx.Colors[colorIndex*3+2]
+		gfx.Render.PixelMemory[index*4+3] = 1
 	}
 	gfx.Render.Lock.Unlock()
 	// runtime.Gosched()

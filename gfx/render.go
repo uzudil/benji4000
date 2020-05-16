@@ -98,7 +98,7 @@ type SpriteCommand struct {
 
 type Render struct {
 	// the video memory
-	PixelMemory [Width * Height * 3]byte
+	PixelMemory [Width * Height * 4]byte
 	Lock        sync.Mutex
 	SpriteLock  sync.Mutex
 	Window      *glfw.Window
@@ -128,7 +128,7 @@ func setTextureParams() {
 func NewRender(scale int, fullscreen bool) *Render {
 	// make sure this happens first
 	render := &Render{
-		PixelMemory:   [Width * Height * 3]byte{},
+		PixelMemory:   [Width * Height * 4]byte{},
 		Lock:          sync.Mutex{},
 		SpriteLock:    sync.Mutex{},
 		Fps:           60,
@@ -302,8 +302,8 @@ func (render *Render) runSpriteCommand(command SpriteCommand) error {
 		for index, image := range command.Pixels {
 			gl.BindTexture(gl.TEXTURE_2D, sprite.Textures[index])
 			setTextureParams()
-			gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, sprite.W, sprite.H, 0, gl.RGB, gl.UNSIGNED_BYTE, nil)
-			gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, sprite.W, sprite.H, gl.RGB, gl.UNSIGNED_BYTE, gl.Ptr(&image[0]))
+			gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, sprite.W, sprite.H, 0, gl.RGBA, gl.UNSIGNED_BYTE, nil)
+			gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, sprite.W, sprite.H, gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(&image[0]))
 		}
 
 		// translate
@@ -327,7 +327,7 @@ func (render *Render) MainLoop() {
 	gl.GenTextures(1, &texture)
 	gl.BindTexture(gl.TEXTURE_2D, texture)
 	setTextureParams()
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, Width, Height, 0, gl.RGB, gl.UNSIGNED_BYTE, nil)
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, Width, Height, 0, gl.RGBA, gl.UNSIGNED_BYTE, nil)
 
 	// bind to shader
 	gl.UseProgram(render.Program)
@@ -364,7 +364,7 @@ func (render *Render) MainLoop() {
 			render.Lock.Lock()
 			// need to do this so go.Ptr() works. This could be a bug in go: https://github.com/golang/go/issues/14210
 			pixels := render.PixelMemory
-			gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, Width, Height, gl.RGB, gl.UNSIGNED_BYTE, gl.Ptr(&pixels[0]))
+			gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, Width, Height, gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(&pixels[0]))
 			render.Lock.Unlock()
 			lastUpdate = currentTime
 		}
@@ -387,6 +387,9 @@ func (render *Render) MainLoop() {
 		gl.BindVertexArray(render.Vao)
 		gl.DrawArrays(gl.TRIANGLES, 0, int32(len(screen)/8))
 
+		gl.Enable(gl.BLEND)
+		gl.BlendEquation(gl.MAX)
+		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE)
 		render.SpriteLock.Lock()
 		for _, sprite := range render.Sprites {
 			if sprite.Show {
@@ -404,6 +407,7 @@ func (render *Render) MainLoop() {
 			}
 		}
 		render.SpriteLock.Unlock()
+		gl.Disable(gl.BLEND)
 
 		glfw.PollEvents()
 		render.Window.SwapBuffers()

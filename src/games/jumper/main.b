@@ -1,7 +1,7 @@
 const SPEED_SLOW = 0.1;
-const SPEED_FAST = 0.01;
-const JUMP_AIR_TIME = 0.25;
-const VERTICAL_SPEED = 0.01;
+const SPEED_FAST = 0.05;
+const JUMP_AIR_TIME = 0.6;
+const VERTICAL_SPEED = 0.0175;
 
 player := {
     "sprite": 0,
@@ -24,11 +24,7 @@ def movePlayer() {
     if(player["sinceMove"] > 2) {
         player["speed"] := SPEED_FAST;
     }
-    step := 0.1;
-    if(player["speed"] = SPEED_SLOW) {
-        step := 1;
-    }
-    player["imgIndex"] := player["imgIndex"] + step;
+    player["imgIndex"] := player["imgIndex"] + (player["speed"] / SPEED_SLOW);
     if(player["imgIndex"] >= len(imglist)) {
         player["imgIndex"] := 0;
     }
@@ -50,24 +46,25 @@ def drawLevel() {
     #clearVideo();
     drawSprite(player["x"], player["y"], player["sprite"], player["imgIndex"], 0, 0);
     
-    # draw some rocks
+    y := 0;
+    while(y < 100) {
+        x := 0;
+        while(x < 160) {
+            if(random() > 0.8) {
+                drawImage(x, y, img["b2"]);
+            }
+            x := x + 8;
+        }
+        y := y + 16;
+    }
     y := 100;
     while(y < 200) {
         x := 0;
         while(x < 160) {
-            drawImage(x, y, img["rock" + int(random() * 2 + 1)]);
-            x := x + 24;
+            drawImage(x, y, img["b1"]);
+            x := x + 8;
         }
-        y := y + 24;
-    }
-    y := 20;
-    while(y > -20) {
-        x := 0;
-        while(x < 160) {
-            drawImage(x, y, img["rock" + int(random() * 2 + 1)]);
-            x := x + 24;
-        }
-        y := y - 24;
+        y := y + 16;
     }
     updateVideo();
 }
