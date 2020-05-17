@@ -40,7 +40,7 @@ rooms := [
     ]
 ];
 roomIndex := 0;
-doorBlockIndex := [];
+doorBlockIndex := 0;
 
 def drawBlocks(isBackground) {
     row := 0; 
@@ -61,7 +61,7 @@ def drawBlocks(isBackground) {
                         (row + 1) * BLOCK_HEIGHT
                     );
                     if(c = "d") {
-                        doorBlockIndex[len(doorBlockIndex)] := blockIndex;
+                        doorBlockIndex := blockIndex;
                     }
                 } else {
                     drawImage(x * BLOCK_WIDTH + b[2], row * BLOCK_HEIGHT + b[3], img[b[0]]);
@@ -87,7 +87,6 @@ def drawLevel() {
     clearBoundingBoxes(BLOCK_KEY);
     clearBoundingBoxes(DOOR_KEY);
     clearBoundingBoxes(KEY_KEY);
-    doorBlockIndex := [];
 
     # draw background
     drawBlocks(true);
@@ -124,33 +123,9 @@ def checkDoors(x1, y1, x2, y2) {
 }
 
 def openGate() {
-    row := 0; 
-    room := rooms[roomIndex];
-    while(row < len(room)) {
-        x := 0;
-        while(x < len(room[row])) {
-            c := substr(room[row], x, 1);
-            if(c = "d") {
-                b := blockDefs["o"];
-                drawImage(x * BLOCK_WIDTH, row * BLOCK_HEIGHT, img[b[0]]);
-                addBoundingBox(
-                        DOOR_KEY, 
-                        x * BLOCK_WIDTH, 
-                        row * BLOCK_HEIGHT,
-                        (x + 1) * BLOCK_WIDTH, 
-                        (row + 1) * BLOCK_HEIGHT
-                    );
-            }
-            x := x + 1;
-        }
-        row := row + 1;
-    }
-
-    i := 0;
-    while(i < len(doorBlockIndex)) {
-        delBoundingBox(BLOCK_KEY, doorBlockIndex[i]);
-        i := i + 1;
-    }
+    r := getBoundingBox(BLOCK_KEY, doorBlockIndex);
+    drawImage(r[0], r[1], img[blockDefs["o"][0]]);
+    addBoundingBox(DOOR_KEY, r[0], r[1], r[2], r[3]);
+    delBoundingBox(BLOCK_KEY, doorBlockIndex);
     updateVideo();
-    return 1;
 }
