@@ -25,6 +25,10 @@ type Cursor struct {
 	Gfx    *Gfx
 }
 
+type Rect struct {
+	x, y, x2, y2 int
+}
+
 // Gfx is the "video card" api
 type Gfx struct {
 	// the video mode
@@ -43,6 +47,8 @@ type Gfx struct {
 	Font *[512][8]uint8
 	// the cursor in interactive mode
 	Cursor *Cursor
+	// Bounding boxes for collision detection
+	BoundingBoxes map[int]*[]Rect
 }
 
 const (
@@ -104,6 +110,7 @@ func NewGfx(scale int, fullscreen bool) *Gfx {
 			Fg: COLOR_DARK_BLUE,
 			Bg: COLOR_LIGHT_BLUE,
 		},
+		BoundingBoxes: map[int]*[]Rect{},
 	}
 	gfx.Cursor.Gfx = gfx
 	return gfx
@@ -495,6 +502,73 @@ func (gfx *Gfx) DrawSprite(x, y, index, imgIndex, flipX, flipY int) error {
 	gfx.Render.Sprites[index].FlipY = int32(flipY)
 	gfx.Render.SpriteLock.Unlock()
 	return nil
+}
+
+func (gfx *Gfx) AddBoundingBox(key, x, y, x2, y2 int) (int, error) {
+	rect := Rect{x, y, x2, y2}
+	boxList, ok := gfx.BoundingBoxes[key]
+	if ok {
+		*boxList = append(*boxList, rect)
+	} else {
+		boxList = &[]Rect{rect}
+	}
+	gfx.BoundingBoxes[key] = boxList
+	return len(*boxList) - 1, nil
+}
+
+func (gfx *Gfx) GetBoundingBox(key, index int) (int, int, int, int, error) {
+	boxList, ok := gfx.BoundingBoxes[key]
+	if !ok {
+		return 0, 0, 0, 0, fmt.Errorf("No bounding boxes for key=%d", key)
+	}
+	r := (*boxList)[index]
+	return r.x, r.y, r.x2, r.y2, nil
+
+}
+
+func (gfx *Gfx) DelBoundingBox(key, index int) error {
+	boxList, ok := gfx.BoundingBoxes[key]
+	if !ok {
+		return fmt.Errorf("No bounding boxes for key=%d", key)
+	}
+	(*boxList)[index] = Rect{-1000, -1000, -1000, -1000}
+	return nil
+}
+
+func (gfx *Gfx) ClearBoundingBoxes(key int) error {
+	delete(gfx.BoundingBoxes, key)
+	return nil
+}
+
+// todo: make this faster by using a quad-tree?
+func (gfx *Gfx) CheckBoundingBoxes(key, x, y, x2, y2 int) (int, error) {
+	boxList, ok := gfx.BoundingBoxes[key]
+	if !ok {
+		return -1, nil
+	}
+	// fmt.Printf("boxList=%v\n", boxList)
+	rect := Rect{x, y, x2, y2}
+	for index, bb := range *boxList {
+		if rect.isOverlap(bb) {
+			return index, nil
+		}
+	}
+	return -1, nil
+}
+
+func (a Rect) isOverlap(b Rect) bool {
+	return b.isInside(a.x, a.y) ||
+		b.isInside(a.x, a.y2) ||
+		b.isInside(a.x2, a.y) ||
+		b.isInside(a.x2, a.y2) ||
+		a.isInside(b.x, b.y) ||
+		a.isInside(b.x, b.y2) ||
+		a.isInside(b.x2, b.y) ||
+		a.isInside(b.x2, b.y2)
+}
+
+func (a Rect) isInside(x, y int) bool {
+	return x >= a.x && y >= a.y && x <= a.x2 && y <= a.y2
 }
 
 func (gfx *Gfx) Scroll(dx, dy int) error {

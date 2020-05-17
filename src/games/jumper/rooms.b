@@ -1,9 +1,13 @@
+const BLOCK_KEY = 0;
+const KEY_KEY = 1;
+const DOOR_KEY = 2;
+
 blockDefs := {
-    "x": [ "b1", true, 0, 0 ],
-    ".": [ "b2", false, -4, -8 ],
-    "k": [ "key", false, 0, 0 ],
-    "d": [ "door", true, 0, 0 ],
-    "o": [ "open", false, 0, 0 ]
+    "x": [ "b1", true, 0, 0, false ],
+    ".": [ "b2", false, -3, -5, true ],
+    "k": [ "key", false, 0, 0, false ],
+    "d": [ "door", true, 0, 0, false ],
+    "o": [ "open", false, 0, 0, false ]
 };
 rooms := [
     [
@@ -36,36 +40,39 @@ rooms := [
     ]
 ];
 roomIndex := 0;
-blocks := [];
-keys := [];
-doors := [];
 doorBlockIndex := [];
 
-def drawBlocks(block, eq) {
+def drawBlocks(isBackground) {
     row := 0; 
     room := rooms[roomIndex];
     while(row < len(room)) {
         x := 0;
         while(x < len(room[row])) {
             c := substr(room[row], x, 1);
-            if((eq = false && c != block) || (eq = true && c = block && random() > 0.85)) {
-                b := blockDefs[c];
+            b := blockDefs[c];
+            if(isBackground = b[4] && (isBackground = false || random() > 0.85)) {
                 if(b[1]) {
-                    drawImage(x * BLOCK_WIDTH, row * BLOCK_HEIGHT, img[b[0]]);
+                    drawImage(x * BLOCK_WIDTH + b[2], row * BLOCK_HEIGHT + b[3], img[b[0]]);
+                    blockIndex := addBoundingBox(
+                        BLOCK_KEY, 
+                        x * BLOCK_WIDTH, 
+                        row * BLOCK_HEIGHT,
+                        (x + 1) * BLOCK_WIDTH, 
+                        (row + 1) * BLOCK_HEIGHT
+                    );
                     if(c = "d") {
-                        doorBlockIndex[len(doorBlockIndex)] := len(blocks);
+                        doorBlockIndex[len(doorBlockIndex)] := blockIndex;
                     }
-                    blocks[len(blocks)] := [
-                        x * BLOCK_WIDTH, row * BLOCK_HEIGHT,
-                        (x + 1) * BLOCK_WIDTH, (row + 1) * BLOCK_HEIGHT
-                    ];
                 } else {
                     drawImage(x * BLOCK_WIDTH + b[2], row * BLOCK_HEIGHT + b[3], img[b[0]]);
                     if(c = "k") {
-                        keys[len(keys)] := [
-                            x * BLOCK_WIDTH, row * BLOCK_HEIGHT,
-                            (x + 1) * BLOCK_WIDTH, (row + 1) * BLOCK_HEIGHT
-                        ];
+                        addBoundingBox(
+                            KEY_KEY, 
+                            x * BLOCK_WIDTH, 
+                            row * BLOCK_HEIGHT,
+                            (x + 1) * BLOCK_WIDTH, 
+                            (row + 1) * BLOCK_HEIGHT
+                        );
                     }
                 }
             }
@@ -77,37 +84,19 @@ def drawBlocks(block, eq) {
 
 def drawLevel() {
     # reset memory
-    blocks := [];
-    keys := [];
-    doors := [];
+    clearBoundingBoxes(BLOCK_KEY);
+    clearBoundingBoxes(DOOR_KEY);
+    clearBoundingBoxes(KEY_KEY);
     doorBlockIndex := [];
 
     # draw background
-    drawBlocks(".", true);
+    drawBlocks(true);
     # draw foreground
-    drawBlocks(".", false);
-}
-
-# todo: implement in go with quad-tree
-def checkBoundingBoxes(x1, y1, x2, y2, blocks) {
-    i := 0;
-    while(i < len(blocks)) {
-        if(isOverlap(
-            x1, y1, x2, y2, 
-            blocks[i][0],
-            blocks[i][1],
-            blocks[i][2],
-            blocks[i][3])
-        ) {
-            return i;
-        }
-        i := i + 1;
-    }
-    return -1;
+    drawBlocks(false);
 }
 
 def checkBlocks(x1, y1, x2, y2) {
-    b := checkBoundingBoxes(x1, y1, x2, y2, blocks);
+    b := checkBoundingBoxes(BLOCK_KEY, x1, y1, x2, y2);
     if(b > -1) {
         return true;
     }
@@ -115,10 +104,11 @@ def checkBlocks(x1, y1, x2, y2) {
 }
 
 def checkKeys(x1, y1, x2, y2) {
-    b := checkBoundingBoxes(x1, y1, x2, y2, keys);
+    b := checkBoundingBoxes(KEY_KEY, x1, y1, x2, y2);
     if(b > -1) {
-        fillRect(keys[b][0], keys[b][1], keys[b][2], keys[b][3], COLOR_BLACK);
-        del keys[b];
+        r := getBoundingBox(KEY_KEY, b);
+        fillRect(r[0], r[1], r[2], r[3], COLOR_BLACK);
+        delBoundingBox(KEY_KEY, b);
         updateVideo();
         return true;
     }
@@ -126,7 +116,7 @@ def checkKeys(x1, y1, x2, y2) {
 }
 
 def checkDoors(x1, y1, x2, y2) {
-    b := checkBoundingBoxes(x1, y1, x2, y2, doors);
+    b := checkBoundingBoxes(DOOR_KEY, x1, y1, x2, y2);
     if(b > -1) {
         return true;
     }
@@ -143,10 +133,13 @@ def openGate() {
             if(c = "d") {
                 b := blockDefs["o"];
                 drawImage(x * BLOCK_WIDTH, row * BLOCK_HEIGHT, img[b[0]]);
-                doors[len(doors)] := [
-                    x * BLOCK_WIDTH, row * BLOCK_HEIGHT,
-                    (x + 1) * BLOCK_WIDTH, (row + 1) * BLOCK_HEIGHT
-                ];                
+                addBoundingBox(
+                        DOOR_KEY, 
+                        x * BLOCK_WIDTH, 
+                        row * BLOCK_HEIGHT,
+                        (x + 1) * BLOCK_WIDTH, 
+                        (row + 1) * BLOCK_HEIGHT
+                    );
             }
             x := x + 1;
         }
@@ -155,7 +148,7 @@ def openGate() {
 
     i := 0;
     while(i < len(doorBlockIndex)) {
-        del blocks[doorBlockIndex[i]];
+        delBoundingBox(BLOCK_KEY, doorBlockIndex[i]);
         i := i + 1;
     }
     updateVideo();

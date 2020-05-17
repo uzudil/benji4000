@@ -605,6 +605,54 @@ func loadFile(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return data, nil
 }
 
+func addBoundingBox(ctx *Context, arg ...interface{}) (interface{}, error) {
+	a, err := intArgs(ctx, 5, arg)
+	if err != nil {
+		return nil, err
+	}
+	index, err := ctx.Video.AddBoundingBox(a[0], a[1], a[2], a[3], a[4])
+	return float64(index), err
+}
+
+func getBoundingBox(ctx *Context, arg ...interface{}) (interface{}, error) {
+	a, err := intArgs(ctx, 2, arg)
+	if err != nil {
+		return nil, err
+	}
+	x, y, x2, y2, err := ctx.Video.GetBoundingBox(a[0], a[1])
+	r := make([]interface{}, 4)
+	r[0] = float64(x)
+	r[1] = float64(y)
+	r[2] = float64(x2)
+	r[3] = float64(y2)
+	return &r, err
+}
+
+func delBoundingBox(ctx *Context, arg ...interface{}) (interface{}, error) {
+	a, err := intArgs(ctx, 2, arg)
+	if err != nil {
+		return nil, err
+	}
+	return nil, ctx.Video.DelBoundingBox(a[0], a[1])
+}
+
+func clearBoundingBoxes(ctx *Context, arg ...interface{}) (interface{}, error) {
+	a, err := intArgs(ctx, 1, arg)
+	if err != nil {
+		return nil, err
+	}
+	return nil, ctx.Video.ClearBoundingBoxes(a[0])
+}
+
+func checkBoundingBoxes(ctx *Context, arg ...interface{}) (interface{}, error) {
+	a, err := intArgs(ctx, 5, arg)
+	if err != nil {
+		return nil, err
+	}
+	index, err := ctx.Video.CheckBoundingBoxes(a[0], a[1], a[2], a[3], a[4])
+	return float64(index), err
+}
+
 func assert(ctx *Context, arg ...interface{}) (interface{}, error) {
 	a := arg[0]
 	b := arg[1]
@@ -713,6 +761,11 @@ func Builtins() map[string]Builtin {
 		"anyNonHelperKeyDown": anyNonHelperKeyDown,
 		"save":                saveFile,
 		"load":                loadFile,
+		"addBoundingBox":      addBoundingBox,
+		"getBoundingBox":      getBoundingBox,
+		"delBoundingBox":      delBoundingBox,
+		"clearBoundingBoxes":  clearBoundingBoxes,
+		"checkBoundingBoxes":  checkBoundingBoxes,
 	}
 }
 
