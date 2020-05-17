@@ -166,14 +166,14 @@ type Array struct {
 	Pos lexer.Position
 
 	LeftValue   *Expression   `"[" @@*`
-	RightValues []*Expression `( "," @@ )* "]"`
+	RightValues []*Expression `( "," @@ )* ","? "]"`
 }
 
 type Map struct {
 	Pos lexer.Position
 
 	LeftNameValuePair   *NameValuePair   `"{" @@*`
-	RightNameValuePairs []*NameValuePair `( "," @@ )* "}"`
+	RightNameValuePairs []*NameValuePair `( "," @@ )* ","? "}"`
 }
 
 type NameValuePair struct {

@@ -20,13 +20,18 @@ player := {
     "speed": SPEED_SLOW,
     "sinceMove": 0,
     "flipX": 0,
+    "flipY": 0,
     "jump": 0,
     "jumpMove": 0,
     "gravity": 0,
-    "keys": 0
+    "keys": 0,
+    "lives": 3,
+    "death": 0,
+    "deathFlip": 0,
 };
 img := null;
 gameWon := false;
+falling := false;
 
 def animatePlayer() {
     player["sinceMove"] := player["sinceMove"] + 1;
@@ -86,6 +91,7 @@ def pickupKeys() {
             player["x"] + PLAYER_WIDTH/2, 
             player["y"] + PLAYER_HEIGHT/2)) {
         player["keys"] := player["keys"] + 1;
+        drawUI();
         if(player["keys"] >= 3) {
             openGate();
         }
@@ -113,81 +119,115 @@ def startLevel() {
     player["x"] := 80;
     player["y"] := 88;
     player["keys"] := 0;
+    player["lives"] := 3;
     drawLevel();
     initEnemies();
+    drawUI();
+}
+
+def drawUI() {
+    drawText(0, 190, COLOR_WHITE, COLOR_BLACK, "Lives:" + player["lives"]);
+    drawText(110, 190, COLOR_WHITE, COLOR_BLACK, "Keys:" + player["keys"]);
     updateVideo();
+}
+
+def gameMode() {
+    ox := player["x"];
+    oy := player["y"];
+
+    # jump
+    if(getTicks() < player["jump"]) {
+        if(getTicks() > player["jumpMove"]) {
+            m := movePlayer(UP);
+            if(m) {
+                player["jumpMove"] := getTicks() + VERTICAL_SPEED;
+            } else {
+                player["jump"] := 0;
+                player["jumpMove"] := 0;
+            }
+        }
+    } else {
+        player["jump"] := 0;
+        player["jumpMove"] := 0;
+    }
+
+    # gravity
+    if(player["jump"] = 0) {
+        if(getTicks() > player["gravity"]) {
+            falling := movePlayer(DOWN);
+            player["gravity"] := getTicks() + VERTICAL_SPEED;
+        }
+    } else {
+        player["gravity"] := 0;
+    }
+
+    # input handling
+    if(anyKeyDown()) {        
+        if(getTicks() > player["timer"]) {
+            move := false;
+            if(isKeyDown(KeyLeft)) {
+                move := movePlayer(LEFT);
+            }
+            if(isKeyDown(KeyRight)) {
+                move := movePlayer(RIGHT);
+            }
+            if(isKeyDown(KeySpace) && player["jump"] = 0 && falling = false) {
+                player["jump"] := getTicks() + JUMP_AIR_TIME;
+            }
+            if(move) {
+                animatePlayer();
+            } else {
+                player["speed"] := SPEED_SLOW;
+                player["sinceMove"] := 0;
+            }
+            player["timer"] := getTicks() + player["speed"];
+        }
+    } else {
+        # on keyup reset movement
+        player["speed"] := SPEED_SLOW;
+        player["sinceMove"] := 0;
+        player["timer"] := 0;
+    }
+
+    moveEnemies();
+    pickupKeys();
+    checkLevelDone();
+
+    if(player["x"] != ox || player["y"] != oy) {
+        drawSprite(player["x"], player["y"], player["sprite"], player["imgIndex"], player["flipX"], 0);
+    }
+    if(checkEnemyCollision(player["sprite"])) {
+        player["lives"] := player["lives"] - 1;
+        drawUI();
+        player["death"] := getTicks() + 1;
+    }
+}
+
+def deathMode() {
+    if(getTicks() < player["death"]) {
+        if(getTicks() > player["deathFlip"]) {
+            player["flipX"] := int(random() * 2);
+            player["flipY"] := int(random() * 2);
+            drawSprite(player["x"], player["y"], player["sprite"], player["imgIndex"], player["flipX"], player["flipY"]);
+            player["deathFlip"] := getTicks() + 0.05;
+        }
+    } else {
+        player["death"] := 0;
+        player["x"] := 80;
+        player["y"] := 88;
+    }
 }
 
 def main() {
     initGame();
     startLevel();
 
-    falling := false;
-    while(isKeyDown(KeyEscape) != true && gameWon = false) {
+    while(isKeyDown(KeyEscape) != true && gameWon = false && player["lives"] > 0) {
 
-        ox := player["x"];
-        oy := player["y"];
-
-        # jump
-        if(getTicks() < player["jump"]) {
-            if(getTicks() > player["jumpMove"]) {
-                m := movePlayer(UP);
-                if(m) {
-                    player["jumpMove"] := getTicks() + VERTICAL_SPEED;
-                } else {
-                    player["jump"] := 0;
-                    player["jumpMove"] := 0;
-                }
-            }
+        if(player["death"] > 0) {
+            deathMode();
         } else {
-            player["jump"] := 0;
-            player["jumpMove"] := 0;
-        }
-
-        # gravity
-        if(player["jump"] = 0) {
-            if(getTicks() > player["gravity"]) {
-                falling := movePlayer(DOWN);
-                player["gravity"] := getTicks() + VERTICAL_SPEED;
-            }
-        } else {
-            player["gravity"] := 0;
-        }
-
-        # input handling
-        if(anyKeyDown()) {        
-            if(getTicks() > player["timer"]) {
-                move := false;
-                if(isKeyDown(KeyLeft)) {
-                    move := movePlayer(LEFT);
-                }
-                if(isKeyDown(KeyRight)) {
-                    move := movePlayer(RIGHT);
-                }
-                if(isKeyDown(KeySpace) && player["jump"] = 0 && falling = false) {
-                    player["jump"] := getTicks() + JUMP_AIR_TIME;
-                }
-                if(move) {
-                    animatePlayer();
-                } else {
-                    player["speed"] := SPEED_SLOW;
-                    player["sinceMove"] := 0;
-                }
-                player["timer"] := getTicks() + player["speed"];
-            }
-        } else {
-            # on keyup reset movement
-            player["speed"] := SPEED_SLOW;
-            player["sinceMove"] := 0;
-            player["timer"] := 0;
-        }
-
-        moveEnemies();
-        pickupKeys();
-        checkLevelDone();
-
-        if(player["x"] != ox || player["y"] != oy) {
-            drawSprite(player["x"], player["y"], player["sprite"], player["imgIndex"], player["flipX"], 0);
+            gameMode();
         }
     }
 }

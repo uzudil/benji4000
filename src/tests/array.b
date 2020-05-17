@@ -70,5 +70,8 @@ def main() {
     print("After create in function, a=" + a);
     print("After create in function, list=" + list);
 
+    withcomma := [1,2,3,];
+    trace("with comma=" + withcomma);
+
     print("Done");
 }

@@ -35,7 +35,7 @@ perRoom := [
         [ 80, 165, 1, 0]
     ],
     [
-        [ 80, 40, 0, 1],
+        [ 90, 40, 0, 1],
         [ 80, 140, 1, 0]
     ]
 ];
@@ -83,4 +83,15 @@ def moveEnemies() {
         }
         i := i + 1;
      }
+}
+
+def checkEnemyCollision(playerSprite) {
+    i := 0;
+    while(i < len(enemies)) {
+        if(checkSpriteCollision(playerSprite, enemies[i]["sprite"])) {
+            return true;
+        }
+        i := i + 1;
+    }
+    return false;
 }

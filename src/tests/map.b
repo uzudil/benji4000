@@ -60,5 +60,9 @@ def main() {
     assert(new_map, { "xxx": 123, "yyy": "zaza" });
     print("new map created in a function: " + new_map);
 
+    # with trailing comma
+    withcomma := { "a": 1, "b": 2, };
+    trace("with comma:" + withcomma);
+
     print("Done");
 }

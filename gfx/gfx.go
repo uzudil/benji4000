@@ -49,6 +49,12 @@ type Gfx struct {
 	Cursor *Cursor
 	// Bounding boxes for collision detection
 	BoundingBoxes map[int]*[]Rect
+	// sprite collisions
+	SpriteCollisions [8][8]bool
+	// sprite positions
+	SpritePosition [8]Rect
+	// sprite dimensions
+	SpriteDimensions [8][2]int
 }
 
 const (
@@ -110,7 +116,14 @@ func NewGfx(scale int, fullscreen bool) *Gfx {
 			Fg: COLOR_DARK_BLUE,
 			Bg: COLOR_LIGHT_BLUE,
 		},
-		BoundingBoxes: map[int]*[]Rect{},
+		BoundingBoxes:    map[int]*[]Rect{},
+		SpriteCollisions: [8][8]bool{},
+		SpritePosition:   [8]Rect{},
+		SpriteDimensions: [8][2]int{},
+	}
+	for _, sp := range gfx.SpritePosition {
+		sp.x = -1000
+		sp.y = -1000
 	}
 	gfx.Cursor.Gfx = gfx
 	return gfx
@@ -480,6 +493,9 @@ func (gfx *Gfx) SetSprite(index int, imgs []map[string]interface{}) error {
 		pixelList[i] = pixels
 	}
 
+	gfx.SpriteDimensions[index][0] = int(float64(w) * 0.8)
+	gfx.SpriteDimensions[index][1] = int(float64(h) * 0.8)
+
 	gfx.Render.SpriteChannel <- SpriteCommand{
 		Command: "new",
 		Index:   index,
@@ -491,6 +507,17 @@ func (gfx *Gfx) SetSprite(index int, imgs []map[string]interface{}) error {
 }
 
 func (gfx *Gfx) DrawSprite(x, y, index, imgIndex, flipX, flipY int) error {
+	gfx.SpritePosition[index].x = x - gfx.SpriteDimensions[index][0]/2
+	gfx.SpritePosition[index].y = y - gfx.SpriteDimensions[index][1]/2
+	gfx.SpritePosition[index].x2 = x + gfx.SpriteDimensions[index][0]/2
+	gfx.SpritePosition[index].y2 = y + gfx.SpriteDimensions[index][1]/2
+
+	for a, spA := range gfx.SpritePosition {
+		for b, spB := range gfx.SpritePosition {
+			gfx.SpriteCollisions[a][b] = spA.isOverlap(spB)
+		}
+	}
+
 	gfx.Render.SpriteLock.Lock()
 	if gfx.VideoMode == GfxMultiColorMode {
 		x *= 2
@@ -502,6 +529,10 @@ func (gfx *Gfx) DrawSprite(x, y, index, imgIndex, flipX, flipY int) error {
 	gfx.Render.Sprites[index].FlipY = int32(flipY)
 	gfx.Render.SpriteLock.Unlock()
 	return nil
+}
+
+func (gfx *Gfx) CheckSpriteCollision(indexA, indexB int) (bool, error) {
+	return gfx.SpriteCollisions[indexA][indexB], nil
 }
 
 func (gfx *Gfx) AddBoundingBox(key, x, y, x2, y2 int) (int, error) {
