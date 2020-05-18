@@ -53,8 +53,6 @@ def initGame() {
 
     # create sprites
     setSprite(player["sprite"], [img["p1"], img["p2"], img["p3"], img["p2"]]);
-    setSprite(1, [img["en1"], img["en2"]]);
-    setSprite(2, [img["en1"], img["en2"]]);
 }
 
 def movePlayer(dir) {

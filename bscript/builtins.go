@@ -324,6 +324,14 @@ func setSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, ctx.Video.SetSprite(int(index), imgs)
 }
 
+func delSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
+	index, ok := arg[0].(float64)
+	if !ok {
+		return nil, fmt.Errorf("First argument should be a number")
+	}
+	return nil, ctx.Video.DelSprite(int(index))
+}
+
 func drawSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 6, arg)
 	if err != nil {
@@ -775,6 +783,7 @@ func Builtins() map[string]Builtin {
 		"clearBoundingBoxes":   clearBoundingBoxes,
 		"checkBoundingBoxes":   checkBoundingBoxes,
 		"checkSpriteCollision": checkSpriteCollision,
+		"delSprite":            delSprite,
 	}
 }
 

@@ -74,6 +74,7 @@ var (
 
 type Sprite struct {
 	Textures   []uint32
+	ImageCount int32
 	Model      mgl32.Mat4
 	X          int32
 	Y          int32
@@ -289,7 +290,7 @@ func (render *Render) runSpriteCommand(command SpriteCommand) error {
 	sprite := &(render.Sprites[command.Index])
 	if command.Command == "new" {
 		if sprite.Show {
-			panic("Sprite already in use")
+			return fmt.Errorf("Sprite already in use")
 		}
 
 		sprite.W = int32(command.W)
@@ -297,6 +298,7 @@ func (render *Render) runSpriteCommand(command SpriteCommand) error {
 
 		// update the texture
 		sprite.Textures = make([]uint32, len(command.Pixels))
+		sprite.ImageCount = int32(len(command.Pixels))
 		gl.GenTextures(int32(len(sprite.Textures)), &sprite.Textures[0])
 		for index, image := range command.Pixels {
 			gl.BindTexture(gl.TEXTURE_2D, sprite.Textures[index])
@@ -311,8 +313,12 @@ func (render *Render) runSpriteCommand(command SpriteCommand) error {
 
 		// finally, enable it
 		sprite.Show = true
-	} else if command.Command == "move" {
-		// moving sprites via a channel is too slow
+	} else if command.Command == "del" {
+		if !sprite.Show {
+			return fmt.Errorf("Sprite already not in use")
+		}
+		gl.DeleteTextures(sprite.ImageCount, &sprite.Textures[0])
+		sprite.Show = false
 	}
 	return nil
 }

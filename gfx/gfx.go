@@ -440,6 +440,14 @@ func (gfx *Gfx) DrawImage(x, y int, img map[string]interface{}) error {
 	return nil
 }
 
+func (gfx *Gfx) DelSprite(index int) error {
+	gfx.Render.SpriteChannel <- SpriteCommand{
+		Command: "del",
+		Index:   index,
+	}
+	return nil
+}
+
 func (gfx *Gfx) SetSprite(index int, imgs []map[string]interface{}) error {
 	img := imgs[0]
 	w := img["width"].(int)
