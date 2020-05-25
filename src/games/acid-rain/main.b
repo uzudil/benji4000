@@ -1,381 +1,224 @@
-const GROUND_STEP = 4;
-const SPEED = 0.01;
-const SPEED_FUEL = 0.05;
-const SPEED_FUEL_DOWN = 0.2;
-const SPEED_Y = 0.05;
-const WAIVE_SPEED = 0.15;
-const GRAVITY_SPEED = 0.02;
-const MAX_HEIGHT = 35;
-const GROUND_HEIGHT_STEP = 2;
-const WAIVE = [ 3, 2, 1, 2 ];
-const HIT_NOTHING = 0;
-const HIT_GROUND = 1;
-const HIT_PAD = 2;
-const PLAYER_COLOR = COLOR_TAN;
+const SPEED_SLOW = 0.1;
+const SPEED_FAST = 0.05;
+const JUMP_AIR_TIME = 1;
+const VERTICAL_SPEED = 0.0175;
+const UP = 1;
+const DOWN = 2;
+const LEFT = 3;
+const RIGHT = 4;
+const PLAYER_WIDTH = 8;
+const PLAYER_HEIGHT = 16;
+const BLOCK_WIDTH = 8;
+const BLOCK_HEIGHT = 16;
+const DROP_WIDTH = 8;
+const DROP_HEIGHT = 16;
 
-const DROP_SPEED = .8;
-
-# todo: can't place comments inside map literal
 player := {
+    "sprite": 0,
     "x": 80,
-    "y": 190,
-    "dir": 0,
-    "dirchange": 0,
-    "switch": 0,
-    "move": 0,
-    "explode": 0,
-    "lives": 5,
-    "gravity_enabled": true
+    "y": 88,
+    "imgIndex": 0,
+    "timer": 0,
+    "speed": SPEED_SLOW,
+    "sinceMove": 0,
+    "flipX": 0,
+    "flipY": 0,
+    "jump": 0,
+    "jumpMove": 0,
+    "gravity": 0,
+    "keys": 0,
+    "points": 0,
+    "lives": 3,
+    "death": 0,
+    "deathFlip": 0,
 };
-title := true;
-info := false;
-gameOn := false;
-death := false;
-deathTimer := 0;
-ground := [];
-groundIndex := 0;    
-scrollStep := 0;
-turnDir := 0;
-soldiers := [ 
-    330 * GROUND_STEP, 
-    331 * GROUND_STEP, 
-    334 * GROUND_STEP, 
-    630 * GROUND_STEP, 
-    627 * GROUND_STEP, 
-    930 * GROUND_STEP, 
-    932 * GROUND_STEP, 
-    928 * GROUND_STEP 
-];
-soldierMoveTimer := 0;
-waiveTimer := 0;
-waiveIndex := 0;
+img := null;
+gameWon := false;
+falling := false;
 
-dropTimer := 0;
-titleDrops := [
-    [ 0, 0, 0, 0, 0, 0],
-    [ 0, 0, 0, 0, 0, 0],
-    [ 0, 0, 0, 0, 0, 0],
-    [ 0, 0, 0, 0, 0, 0]
-];
+def animatePlayer() {
+    player["sinceMove"] := player["sinceMove"] + 1;
+    if(player["sinceMove"] > 2) {
+        player["speed"] := SPEED_FAST;
+    }
+    player["imgIndex"] := player["imgIndex"] + (player["speed"] / SPEED_SLOW);
+    if(player["imgIndex"] >= 4) {
+        player["imgIndex"] := 0;
+    }
+}
 
-gameDrops := [
-    [ 0, 0, 0, 0, 0, 0],
-    [ 0, 0, 0, 0, 0, 0],
-    [ 0, 0, 0, 0, 0, 0],
-    [ 0, 0, 0, 0, 0, 0],
-    [ 0, 0, 0, 0, 0, 0],
-    [ 0, 0, 0, 0, 0, 0]
-];
+def initGame() {
+    setVideoMode(2);
+    setBackground(COLOR_BLACK);
+    clearVideo();
 
-def drawClouds() {
+    img := load("img.dat");
+
+    # create sprites
+    setSprite(player["sprite"], [img["p1"], img["p2"], img["p3"], img["p2"]]);
+
+    initDrops();
     i := 0;
-    x := 15;
-    y1 := 20;
-    y2 := 40;
-    while(i < 10) {
-        if(random() > 0.75) {
-            color := COLOR_MID_GRAY;
-        } else {
-            color := COLOR_WHITE;
-        }
-        fillCircle(x - 5 + (random() * 10), y1 - 5 + (random() * 10), random() * 10 + 3, color);
-        fillCircle(x - 5 + (random() * 10), y2 - 5 + (random() * 10), random() * 10 + 3, color);
-        i := i + 1;
-        x := x + (random() * 10) + 10;
-    }
-}
-
-def drawAcidDrop(x, y) {
-     color := COLOR_GREEN;
-     drawLine(x+2, y, x+2, y-6, color);
-     drawLine(x+1, y, x+1, y-8, color);
-     drawLine(x, y, x, y-10, color);
-     drawLine(x-1, y, x-1, y-12, color);
-     drawLine(x-2, y, x-2, y-10, color);
-     drawLine(x-3, y, x-3, y-8, color);
-     drawLine(x-4, y, x-4, y-6, color);
-     fillCircle(x, y, 5, color);
-     drawLine(x-3, y+5, x+2, y+5, color);
-     drawLine(x-2, y+6, x+1, y+6, color);
-}
-
-def updateAcidRain(drops) {
-    maxrows := len(drops) - 1;
-    i := maxrows;
-    # move all drops down a row, starting from the bottom
-    while(i >= 0) {
-        maxcols := len(drops[i]);
-        j := 0;
-        while(j < maxcols) {
-            if(drops[i][j] = 1) {
-                nextrow := i + 1;
-                drops[i][j] := 0;
-                if(nextrow <= maxrows) {
-                    drops[nextrow][j] := 1;
-                }
-            }
-            j := j + 1;
-        }
-        i := i - 1;
-    }
-
-    j := 0;
-    while(j < len(drops[0])) {
-        if (random() > 0.6) {
-            if (drops[1][j] = 0 && drops[2][j] = 0) {
-                drops[0][j] := 1;
-            }
-        }
-        j := j + 1;
-    }
-}
-
-def drawAcidRain(drops) {
-    if(getTicks() > dropTimer) {
-         updateAcidRain(drops);
-         dropTimer := getTicks() + DROP_SPEED;
-    }
-    i := 0;
-    while(i < len(drops)) {
-        j := 0;
-        while(j < len(drops[i])) {
-            if(drops[i][j] = 1) {
-                x := (j + 1) * 20 + 10;
-                y := (i + 1) * 20 + 60;
-                drawAcidDrop(x, y);
-            }
-            j := j + 1;
-        }
+    while (i < len(drops)) {
+        setSprite(drops[i]["sprite"], [img["drop"]]);
         i := i + 1;
     }
 }
 
-def drawSoldier(index, x, y) {
-    if(getTicks() > waiveTimer) {
-        waiveTimer := getTicks() + WAIVE_SPEED;
-        waiveIndex := waiveIndex + 1;
-        if(waiveIndex >= len(WAIVE)) {
-            waiveIndex := 0;
-        }
+def movePlayer(dir) {
+    px := player["x"];
+    py := player["y"];
+    if(dir = UP) {
+        player["y"] := player["y"] - 1;
     }
-    wi := (waiveIndex + index) % len(WAIVE);
-    drawLine(x + WAIVE[wi], y - 10, x + 4, y - 4, COLOR_LIGHT_BLUE);
-    drawLine(x + 8 - WAIVE[wi], y - 10, x + 4, y - 4, COLOR_LIGHT_BLUE);
-    fillRect(x + 3, y - 8, x + 5, y - 5, COLOR_LIGHT_BLUE);
-    fillRect(x + 2, y - 4, x + 3, y, COLOR_LIGHT_BLUE);
-    fillRect(x + 5, y - 4, x + 6, y, COLOR_LIGHT_BLUE);
-}
-
-def drawPlayerHealthy() {
-    drawSoldier(0, player["x"], player["y"]);
-}
-
-def testCollision(drops) {
-    i := len(drops) - 1;
-    j := 0;
-    max := 40;
-    while(j < len(drops[i])) {
-        if(drops[i][j] = 1) {
-            startx := (j + 1) * 20 + 10;
-            starty := (i + 1) * 20 + 65;
-
-            if (player["x"] > startx) {
-                distx := player["x"] - startx;
-            } else {
-                distx := startx - player["x"];
-            }
-            if (distx <= 10) {
-                return true;
-            }
-        }
-        j := j + 1;
+    if(dir = DOWN) {
+        player["y"] := player["y"] + 1;
     }
-    return false;
-}
-
-def drawPlayerExplode() {
-    i := 0;
-    while(i < 10) {
-        if(random() > 0.75) {
-            color := COLOR_YELLOW;
-        } else {
-            color := COLOR_RED;
-        }
-        fillCircle(player["x"] - 5 + (random() * 10), player["y"] - 5 + (random() * 10), random() * 10 + 3, color);
-        i := i + 1;
+    if(dir = LEFT) {
+        player["x"] := player["x"] - 1;
+        player["flipX"] := 0;
     }
-}
-
-def drawPlayer(drops) {
-    if (testCollision(drops)) {
-        player["explode"] := 1;
-        drawPlayerExplode();
-        death := true;
-        deathTimer := getTicks() + 4;
+    if(dir = RIGHT) {
+        player["x"] := player["x"] + 1;
+        player["flipX"] := 1;
+    }
+    if(checkBlocks(player["x"] - PLAYER_WIDTH/2, 
+            player["y"] - PLAYER_HEIGHT/4, 
+            player["x"] + PLAYER_WIDTH/2, 
+            player["y"] + PLAYER_HEIGHT/2)) {
+        player["x"] := px;
+        player["y"] := py;
         return false;
     }
-    if (death) {
-        drawPlayerExplode();
-    } else {
-        drawPlayerHealthy();
+    return true;
+}
+
+def pickupKeys() {
+    if(checkKeys(player["x"] - PLAYER_WIDTH/2, 
+            player["y"] - PLAYER_HEIGHT/2, 
+            player["x"] + PLAYER_WIDTH/2, 
+            player["y"] + PLAYER_HEIGHT/2)) {
+        player["keys"] := player["keys"] + 1;
+        drawUI();
+        if(player["keys"] >= 3) {
+            openGate();
+        }
     }
 }
 
-def drawGround() {
-    x := 0;
-    y := 190;
-    #maxX := 160;
-    #maxY := 200;
-    fillRect(x, y, x+160, y+10, COLOR_GREEN);
+def startLevel() {
+    clearVideo();
+    player["x"] := 80;
+    player["y"] := 88;
+    player["keys"] := 0;
+    player["lives"] := 3;
+    drawLevel();
+    drawUI();
 }
 
 def drawUI() {
-    drawText(0, 1, COLOR_LIGHT_BLUE, COLOR_DARK_BLUE, "LIFE:" + player["lives"]);
+    drawText(0, 190, COLOR_WHITE, COLOR_BLACK, "Lives:" + player["lives"]);
+    drawText(90, 190, COLOR_WHITE, COLOR_BLACK, "Score:" + player["points"]);
+    updateVideo();
 }
 
-def drawTitle() {
-    drawRect(5, 5, 155, 195, COLOR_DARK_BLUE);
-    drawText(40, 20, COLOR_BROWN, COLOR_BLACK, "Acid Rain!");
-    drawText(14, 45, COLOR_MID_GRAY, COLOR_BLACK, "for the Benji4000");
-    drawText(25, 160, COLOR_MID_GRAY, COLOR_BLACK, "SPACE to start");
-    drawText(14, 175, COLOR_DARK_GRAY, COLOR_BLACK, "2020 (c) by Matt");
+def gameMode() {
+    ox := player["x"];
+    oy := player["y"];
 
-    drawAcidRain(titleDrops);
-    if(isKeyDown(KeySpace)) {
-        title := false;
-        info := true;
-        while(isKeyDown(KeySpace)) {
+    # jump
+    if(getTicks() < player["jump"]) {
+        if(getTicks() > player["jumpMove"]) {
+            m := movePlayer(UP);
+            if(m) {
+                player["jumpMove"] := getTicks() + VERTICAL_SPEED;
+            } else {
+                player["jump"] := 0;
+                player["jumpMove"] := 0;
+            }
         }
-    }
-}
-
-def drawInfo() {
-    drawRect(5, 5, 155, 195, COLOR_DARK_BLUE);
-    drawText(14, 25, COLOR_MID_GRAY, COLOR_BLACK, "You find yourself");
-    drawText(14, 35, COLOR_MID_GRAY, COLOR_BLACK, "deep behind enemy");
-    drawText(14, 45, COLOR_MID_GRAY, COLOR_BLACK, "lines in Soviet");
-    drawText(14, 55, COLOR_MID_GRAY, COLOR_BLACK, "Siberia. You look");
-    drawText(14, 65, COLOR_MID_GRAY, COLOR_BLACK, "above you and");
-    drawText(14, 75, COLOR_MID_GRAY, COLOR_BLACK, "see... Acid Rain!");
-
-    drawText(14, 105, COLOR_RED, COLOR_BLACK, "Stay dry or die!");
-    drawText(14, 135, COLOR_MID_GRAY, COLOR_BLACK, "SPACE to begin");
-    if(isKeyDown(KeySpace)) {
-        info := false;
-        gameOn := true;
-        while(isKeyDown(KeySpace)) {
-        }
-    }
-}
-
-def drawDeath() {
-    setBackground(COLOR_BLACK);
-    drawText(45, 87, COLOR_RED, COLOR_BLACK, "You Died!");
-    if(isKeyDown(KeySpace)) {
-        return 0;
-    }
-    return 1;
-}
-
-def handleInput() {
-    if(player["explode"] > 0) {
-        # todo: return must always return a value...
-        return false;
-    }
-
-    if(isKeyDown(KeyLeft)) {
-        if(turnDir != -1) {
-            player["dirchange"] := 0;
-        }
-        turnDir := -1;
     } else {
-        if(isKeyDown(KeyRight)) {
-            if(turnDir != 1) {
-                player["dirchange"] := 0;
-            }
-            turnDir := 1;
-        } else {
-            turnDir := 0;
-        }
+        player["jump"] := 0;
+        player["jumpMove"] := 0;
     }
 
-    if(getTicks() > player["dirchange"]) {
-        if(turnDir = -1 && player["dir"] > -1) {
-            player["dir"] := player["dir"] - 1;
+    # gravity
+    if(player["jump"] = 0) {
+        if(getTicks() > player["gravity"]) {
+            falling := movePlayer(DOWN);
+            player["gravity"] := getTicks() + VERTICAL_SPEED;
         }
-        if(turnDir = 1 &&  player["dir"] < 1) {
-            player["dir"] := player["dir"] + 1;
+    } else {
+        player["gravity"] := 0;
+    }
+
+    # input handling
+    if(anyKeyDown()) {        
+        if(getTicks() > player["timer"]) {
+            move := false;
+            if(isKeyDown(KeyLeft)) {
+                move := movePlayer(LEFT);
+            }
+            if(isKeyDown(KeyRight)) {
+                move := movePlayer(RIGHT);
+            }
+            if(isKeyDown(KeySpace) && player["jump"] = 0 && falling = false) {
+                player["jump"] := getTicks() + JUMP_AIR_TIME;
+            }
+            if(move) {
+                animatePlayer();
+            } else {
+                player["speed"] := SPEED_SLOW;
+                player["sinceMove"] := 0;
+            }
+            player["timer"] := getTicks() + player["speed"];
         }
-        player["dirchange"] := getTicks() + 0.15;
+    } else {
+        # on keyup reset movement
+        player["speed"] := SPEED_SLOW;
+        player["sinceMove"] := 0;
+        player["timer"] := 0;
+    }
+
+    points := moveDrops();
+    player["points"] := player["points"] + points;
+
+    if(player["x"] != ox || player["y"] != oy) {
+        drawSprite(player["x"], player["y"], player["sprite"], player["imgIndex"], player["flipX"], 0);
+        drawUI();
+    }
+    if(checkDropCollision(player["sprite"])) {
+        player["lives"] := player["lives"] - 1;
+        drawUI();
+        player["death"] := getTicks() + 1;
     }
 }
 
-def movePlayer() {
-
-    if (player["explode"] > 0) {
-        return false;
-    }
-
-    if(player["dir"] != 0 && getTicks() > player["move"]) {
-        player["move"] := getTicks() + SPEED;
-
-        handled := false;
-        if(player["dir"] = 1 && player["x"] < 80) {
-            player["x"] := player["x"] + 1;
-            handled := true;
+def deathMode() {
+    if(getTicks() < player["death"]) {
+        if(getTicks() > player["deathFlip"]) {
+            player["flipX"] := int(random() * 2);
+            player["flipY"] := int(random() * 2);
+            drawSprite(player["x"], player["y"], player["sprite"], player["imgIndex"], player["flipX"], player["flipY"]);
+            player["deathFlip"] := getTicks() + 0.05;
         }
-        if(player["dir"] = -1 && player["x"] > 80) {
-            player["x"] := player["x"] - 1;
-            handled := true;
-        }
-
-        if(handled = false) {
-            if(player["x"] < 130 && player["x"] > 20) {
-                player["x"] := player["x"] + player["dir"];
-            }
-        }
-    }    
-}
-
-def handleGame() {
-    handleInput();
-    setBackground(COLOR_DARK_BLUE);
-    drawGround();
-    movePlayer();
-    drawAcidRain(gameDrops);
-    drawClouds();
-    drawPlayer(gameDrops);
-    drawUI();
-    if (death = true && getTicks() > deathTimer) {
-        gameOn := false;
-    }
-    if(isKeyDown(KeySpace)) {
-        gameOn := false;
-        death := true;
-        while(isKeyDown(KeySpace)) {
-        }
+    } else {
+        player["death"] := 0;
+        player["x"] := 80;
+        player["y"] := 88;
     }
 }
 
 def main() {
-    setVideoMode(2);
-    setBackground(COLOR_BLACK);
-    
-    on := 1;
-    while(on=1) {
-        clearVideo();
-        if(title) {
-            drawTitle();
+    initGame();
+    startLevel();
+
+    while(isKeyDown(KeyEscape) != true && gameWon = false && player["lives"] > 0) {
+
+        if(player["death"] > 0) {
+            deathMode();
+        } else {
+            gameMode();
         }
-        if(info) {
-            drawInfo();
-        }
-        if(gameOn) {
-            handleGame();
-        }
-        if (death) {
-            on := drawDeath();
-        }
-        updateVideo();
     }
 }
