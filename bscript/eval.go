@@ -156,77 +156,7 @@ func (v *Variable) findVar(ctx *Context) (interface{}, error) {
 }
 
 func (v *Variable) Evaluate(ctx *Context) (interface{}, error) {
-	// step 1: find the variable
-	value, err := v.findVar(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// step 2: function call or array/map reference
-	for _, suffix := range v.Suffixes {
-		if value == nil {
-			return nil, lexer.Errorf(v.Pos, "Reference error %q", v.Variable)
-		}
-
-		if suffix.CallParams != nil {
-			// function call
-			args, err := suffix.CallParams.evalParams(ctx)
-			if err != nil {
-				return nil, err
-			}
-
-			// built-in function?
-			builtin, ok := value.(Builtin)
-			if ok {
-				value, err = builtin(ctx, args...)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				closure, ok := value.(*Closure)
-				if !ok {
-					return nil, lexer.Errorf(v.Pos, "function call made on variable that is not a function %q", v.Variable)
-				}
-				value, err = evalFunctionCall(ctx, v.Pos, closure, args)
-				if err != nil {
-					return nil, err
-				}
-			}
-		} else if suffix.Index != nil {
-			// array or map index lookup
-			index, err := suffix.Index.Index.Evaluate(ctx)
-			if err != nil {
-				return nil, err
-			}
-			arr, ok := value.(*[]interface{})
-			if ok {
-				i, ok := index.(float64)
-				if !ok {
-					return nil, lexer.Errorf(v.Pos, "index for array should be a number %q", v.Variable)
-				}
-				value = (*arr)[int(i)]
-			} else {
-				_map, ok := value.(map[string]interface{})
-				if ok {
-					s, ok := index.(string)
-					if !ok {
-						return nil, lexer.Errorf(v.Pos, "index for map should be a string %q", v.Variable)
-					}
-					value = _map[s]
-				} else {
-					return nil, lexer.Errorf(v.Pos, "array index should reference array or map %q", v.Variable)
-				}
-			}
-		} else if suffix.MapKey != nil {
-			_map, ok := value.(map[string]interface{})
-			if ok {
-				value = _map[suffix.MapKey.Key]
-			} else {
-				return nil, lexer.Errorf(v.Pos, "map key should reference a map %q", v.Variable)
-			}
-		}
-	}
-	return value, nil
+	return varEval(ctx, v, nil, false)
 }
 
 func (f *Factor) Evaluate(ctx *Context) (interface{}, error) {
@@ -518,34 +448,14 @@ func (callParams *CallParams) evalParams(ctx *Context) ([]interface{}, error) {
 	return args, nil
 }
 
-func (cmd *Let) Evaluate(ctx *Context) (interface{}, error) {
-	thevalue, err := cmd.Value.Evaluate(ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if len(cmd.Variable.Suffixes) == 0 {
-		for closure := ctx.Closure; closure != nil; closure = closure.Parent {
-			_, ok := closure.Vars[cmd.Variable.Variable]
-			if ok {
-				closure.Vars[cmd.Variable.Variable] = thevalue
-				return nil, nil
-			}
-		}
-		// new var
-		ctx.Closure.Vars[cmd.Variable.Variable] = thevalue
-		return nil, nil
-	}
-
+func varEval(ctx *Context, v *Variable, newValue *interface{}, isDelete bool) (interface{}, error) {
 	// step 1: find the variable
-	value, err := cmd.Variable.findVar(ctx)
+	value, err := v.findVar(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// step 2: function call or array/map reference
-	v := cmd.Variable
 	for suffixIndex, suffix := range v.Suffixes {
 
 		if value == nil {
@@ -590,11 +500,19 @@ func (cmd *Let) Evaluate(ctx *Context) (interface{}, error) {
 				if !ok {
 					return nil, lexer.Errorf(v.Pos, "index for array should be a number %q", v.Variable)
 				}
-				if lastOne {
-					if int(i) < len(*arr) {
-						(*arr)[int(i)] = thevalue
+				if lastOne && (newValue != nil || isDelete) {
+					if newValue != nil {
+						if int(i) < len(*arr) {
+							(*arr)[int(i)] = *newValue
+						} else {
+							*arr = append(*arr, *newValue)
+						}
 					} else {
-						*arr = append(*arr, thevalue)
+						if int(i) < len(*arr) {
+							*arr = append((*arr)[:int(i)], (*arr)[int(i)+1:]...)
+						} else {
+							return nil, lexer.Errorf(v.Pos, "index out of bounds %q", v.Variable)
+						}
 					}
 					return nil, nil
 				}
@@ -606,8 +524,12 @@ func (cmd *Let) Evaluate(ctx *Context) (interface{}, error) {
 					if !ok {
 						return nil, lexer.Errorf(v.Pos, "index for map should be a string %q", v.Variable)
 					}
-					if lastOne {
-						_map[s] = thevalue
+					if lastOne && (newValue != nil || isDelete) {
+						if newValue != nil {
+							_map[s] = *newValue
+						} else {
+							delete(_map, s)
+						}
 						return nil, nil
 					}
 					value = _map[s]
@@ -618,8 +540,12 @@ func (cmd *Let) Evaluate(ctx *Context) (interface{}, error) {
 		} else if suffix.MapKey != nil {
 			_map, ok := value.(map[string]interface{})
 			if ok {
-				if lastOne {
-					_map[suffix.MapKey.Key] = thevalue
+				if lastOne && (newValue != nil || isDelete) {
+					if newValue != nil {
+						_map[suffix.MapKey.Key] = *newValue
+					} else {
+						delete(_map, suffix.MapKey.Key)
+					}
 					return nil, nil
 				}
 				value = _map[suffix.MapKey.Key]
@@ -628,7 +554,36 @@ func (cmd *Let) Evaluate(ctx *Context) (interface{}, error) {
 			}
 		}
 	}
-	return nil, lexer.Errorf(v.Pos, "Cannot assign value %q", v.Variable)
+	if newValue != nil {
+		return nil, lexer.Errorf(v.Pos, "Cannot assign value %q", v.Variable)
+	} else if isDelete {
+		return nil, lexer.Errorf(v.Pos, "Cannot delete %q", v.Variable)
+	} else {
+		return value, nil
+	}
+}
+
+func (cmd *Let) Evaluate(ctx *Context) (interface{}, error) {
+	thevalue, err := cmd.Value.Evaluate(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(cmd.Variable.Suffixes) == 0 {
+		for closure := ctx.Closure; closure != nil; closure = closure.Parent {
+			_, ok := closure.Vars[cmd.Variable.Variable]
+			if ok {
+				closure.Vars[cmd.Variable.Variable] = thevalue
+				return nil, nil
+			}
+		}
+		// new var
+		ctx.Closure.Vars[cmd.Variable.Variable] = thevalue
+		return nil, nil
+	}
+
+	return varEval(ctx, cmd.Variable, &thevalue, false)
 }
 
 // Evaluate a Command.
@@ -683,97 +638,7 @@ func (cmd *Del) Evaluate(ctx *Context) (interface{}, error) {
 		return nil, lexer.Errorf(cmd.Pos, "Del needs an array or map index %q", cmd.Variable)
 	}
 
-	// step 1: find the variable
-	value, err := cmd.Variable.findVar(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// step 2: function call or array/map reference
-	v := cmd.Variable
-	for suffixIndex, suffix := range v.Suffixes {
-
-		if value == nil {
-			return nil, lexer.Errorf(v.Pos, "Reference error %q", v.Variable)
-		}
-
-		lastOne := suffixIndex == len(v.Suffixes)-1
-
-		if suffix.CallParams != nil {
-			// function call
-			args, err := suffix.CallParams.evalParams(ctx)
-			if err != nil {
-				return nil, err
-			}
-
-			// built-in function?
-			builtin, ok := value.(Builtin)
-			if ok {
-				value, err = builtin(ctx, args...)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				closure, ok := value.(*Closure)
-				if !ok {
-					return nil, lexer.Errorf(v.Pos, "function call made on variable that is not a function %q", v.Variable)
-				}
-				value, err = evalFunctionCall(ctx, v.Pos, closure, args)
-				if err != nil {
-					return nil, err
-				}
-			}
-		} else if suffix.Index != nil {
-
-			// array or map index lookup
-			index, err := suffix.Index.Index.Evaluate(ctx)
-			if err != nil {
-				return nil, err
-			}
-			arr, ok := value.(*[]interface{})
-			if ok {
-				i, ok := index.(float64)
-				if !ok {
-					return nil, lexer.Errorf(v.Pos, "index for array should be a number %q", v.Variable)
-				}
-				if lastOne {
-					if int(i) < len(*arr) {
-						*arr = append((*arr)[:int(i)], (*arr)[int(i)+1:]...)
-						return nil, nil
-					}
-					return nil, lexer.Errorf(v.Pos, "index out of bounds %q", v.Variable)
-				}
-				value = (*arr)[int(i)]
-			} else {
-				_map, ok := value.(map[string]interface{})
-				if ok {
-					s, ok := index.(string)
-					if !ok {
-						return nil, lexer.Errorf(v.Pos, "index for map should be a string %q", v.Variable)
-					}
-					if lastOne {
-						delete(_map, s)
-						return nil, nil
-					}
-					value = _map[s]
-				} else {
-					return nil, lexer.Errorf(v.Pos, "array index should reference array or map %q", v.Variable)
-				}
-			}
-		} else if suffix.MapKey != nil {
-			_map, ok := value.(map[string]interface{})
-			if ok {
-				if lastOne {
-					delete(_map, suffix.MapKey.Key)
-					return nil, nil
-				}
-				value = _map[suffix.MapKey.Key]
-			} else {
-				return nil, lexer.Errorf(v.Pos, "map key should reference a map %q", v.Variable)
-			}
-		}
-	}
-	return nil, lexer.Errorf(v.Pos, "Cannot delete %q", v.Variable)
+	return varEval(ctx, cmd.Variable, nil, true)
 }
 
 func (whilecommand *While) Evaluate(ctx *Context) (interface{}, error) {
