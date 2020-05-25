@@ -120,8 +120,6 @@ func (v *Value) Evaluate(ctx *Context) (interface{}, error) {
 			}
 		}
 		return &a, nil
-	case v.ArrayElement != nil:
-		return v.ArrayElement.Evaluate(ctx)
 	case v.AnonFun != nil:
 		return v.AnonFun.Evaluate(ctx)
 	case v.String != nil:
@@ -130,59 +128,98 @@ func (v *Value) Evaluate(ctx *Context) (interface{}, error) {
 		return v.Variable.Evaluate(ctx)
 	case v.Subexpression != nil:
 		return v.Subexpression.Evaluate(ctx)
-	case v.Call != nil:
-		return v.Call.Evaluate(ctx)
 	}
 	panic("unsupported value type" + repr.String(v))
 }
 
-func (ae *ArrayElement) Evaluate(ctx *Context) (interface{}, error) {
-	currentValue, err := ae.Variable.Evaluate(ctx)
-	if err != nil {
-		return nil, err
-	}
-	for _, arrayIndex := range ae.Indexes {
-		ivalue, err := arrayIndex.Index.Evaluate(ctx)
-		if err != nil {
-			return nil, err
+func (v *Variable) findVar(ctx *Context) (interface{}, error) {
+	value, ok := ctx.Consts[v.Variable]
+	if !ok {
+		for closure := ctx.Closure; closure != nil; closure = closure.Parent {
+			value, ok = closure.Vars[v.Variable]
+			if ok {
+				break
+			}
+			value, ok = closure.Defs[v.Variable]
+			if ok {
+				break
+			}
 		}
-
-		a, ok := currentValue.(*[]interface{})
-		if ok {
-			// it's an array
-			index := (int)(ivalue.(float64))
-			if index < 0 || index >= len(*a) {
-				return nil, lexer.Errorf(ae.Pos, "Index out of bounds")
-			}
-			currentValue = (*a)[index]
-		} else {
-			// map?
-			m, ok := currentValue.(map[string]interface{})
-			if !ok {
-				return nil, lexer.Errorf(ae.Pos, "Array element should refer to array or map")
-			}
-			currentValue = m[ivalue.(string)]
+		if !ok {
+			value, ok = ctx.Builtins[v.Variable]
 		}
 	}
-	return currentValue, nil
+	if !ok {
+		return nil, lexer.Errorf(v.Pos, "unknown variable %q", v.Variable)
+	}
+	return value, nil
 }
 
 func (v *Variable) Evaluate(ctx *Context) (interface{}, error) {
-	value, ok := ctx.Consts[v.Variable]
-	if ok {
-		return value, nil
+	// step 1: find the variable
+	value, err := v.findVar(ctx)
+	if err != nil {
+		return nil, err
 	}
-	for closure := ctx.Closure; closure != nil; closure = closure.Parent {
-		value, ok = closure.Vars[v.Variable]
-		if ok {
-			return value, nil
+
+	// step 2: function call or array/map reference
+	for _, suffix := range v.Suffixes {
+		if value == nil {
+			return nil, lexer.Errorf(v.Pos, "Reference error %q", v.Variable)
 		}
-		def, ok := closure.Defs[v.Variable]
-		if ok {
-			return def, nil
+
+		if suffix.CallParams != nil {
+			// function call
+			args, err := suffix.CallParams.evalParams(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			// built-in function?
+			builtin, ok := value.(Builtin)
+			if ok {
+				value, err = builtin(ctx, args...)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				closure, ok := value.(*Closure)
+				if !ok {
+					return nil, lexer.Errorf(v.Pos, "function call made on variable that is not a function %q", v.Variable)
+				}
+				value, err = evalFunctionCall(ctx, v.Pos, closure, args)
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else if suffix.Index != nil {
+			// array or map index lookup
+			index, err := suffix.Index.Index.Evaluate(ctx)
+			if err != nil {
+				return nil, err
+			}
+			arr, ok := value.(*[]interface{})
+			if ok {
+				i, ok := index.(float64)
+				if !ok {
+					return nil, lexer.Errorf(v.Pos, "index for array should be a number %q", v.Variable)
+				}
+				value = (*arr)[int(i)]
+			} else {
+				_map, ok := value.(map[string]interface{})
+				if ok {
+					s, ok := index.(string)
+					if !ok {
+						return nil, lexer.Errorf(v.Pos, "index for map should be a string %q", v.Variable)
+					}
+					value = _map[s]
+				} else {
+					return nil, lexer.Errorf(v.Pos, "array index should reference array or map %q", v.Variable)
+				}
+			}
 		}
 	}
-	return nil, lexer.Errorf(v.Pos, "unknown variable %q", v.Variable)
+	return value, nil
 }
 
 func (f *Factor) Evaluate(ctx *Context) (interface{}, error) {
@@ -419,18 +456,7 @@ func (ctx *Context) debug(message string) {
 	fmt.Println(fmt.Sprintf("Currently: %s\n", ctx.Pos))
 }
 
-func evalBuiltinCall(ctx *Context, c *Call, builtin Builtin, args []interface{}) (interface{}, error) {
-	// fmt.Println("Calling builtin", c.Name)
-	// a built-in function
-
-	value, err := builtin(ctx, args...)
-	if err != nil {
-		return nil, err
-	}
-	return value, nil
-}
-
-func evalFunctionCall(ctx *Context, c *Call, closure *Closure, args []interface{}) (interface{}, error) {
+func evalFunctionCall(ctx *Context, pos lexer.Position, closure *Closure, args []interface{}) (interface{}, error) {
 	if len(ctx.RuntimeStack) > STACK_LIMIT {
 		panic("Stack limit exceeded")
 	}
@@ -441,7 +467,7 @@ func evalFunctionCall(ctx *Context, c *Call, closure *Closure, args []interface{
 		saved[k] = v
 	}
 	ctx.RuntimeStack = append(ctx.RuntimeStack, Runtime{
-		Pos:      c.Pos,
+		Pos:      pos,
 		Function: closure.Function,
 		Vars:     saved,
 	})
@@ -450,7 +476,7 @@ func evalFunctionCall(ctx *Context, c *Call, closure *Closure, args []interface{
 
 	// create function call param variables
 	if len(closure.Params) != len(args) {
-		return nil, lexer.Errorf(c.Pos, "Not all function params given in call to %s", closure.Function)
+		return nil, lexer.Errorf(pos, "Not all function params given in call to %s", closure.Function)
 	}
 	for index := 0; index < len(closure.Params); index++ {
 		closure.Vars[closure.Params[index]] = args[index]
@@ -473,36 +499,6 @@ func evalFunctionCall(ctx *Context, c *Call, closure *Closure, args []interface{
 	return value, err
 }
 
-func (closure *Closure) findFunction(callName *CallName, ctx *Context) (*Closure, bool) {
-	if callName.NameOrVariable != nil {
-		// a defined function
-		fx, ok := closure.Defs[*callName.NameOrVariable]
-		if ok {
-			return fx, ok
-		}
-
-		// variable pointing to a function
-		variable, ok := closure.Vars[*callName.NameOrVariable]
-		if ok {
-			fx, ok = variable.(*Closure)
-			if ok {
-				return fx, true
-			}
-		}
-	} else {
-		arrayElement, err := callName.ArrayElement.Evaluate(ctx)
-		if err != nil {
-			return nil, false
-		}
-		fx, ok := arrayElement.(*Closure)
-		if ok {
-			return fx, true
-		}
-	}
-
-	return nil, false
-}
-
 func (callParams *CallParams) evalParams(ctx *Context) ([]interface{}, error) {
 	args := []interface{}{}
 	for _, arg := range callParams.Args {
@@ -515,125 +511,106 @@ func (callParams *CallParams) evalParams(ctx *Context) ([]interface{}, error) {
 	return args, nil
 }
 
-func (c *Call) Evaluate(ctx *Context) (interface{}, error) {
-	args, err := c.CallParams[0].evalParams(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// call builtin function
-	if c.CallName.NameOrVariable != nil {
-		builtin, ok := ctx.Builtins[*c.CallName.NameOrVariable]
-		if ok {
-			return evalBuiltinCall(ctx, c, builtin, args)
-		}
-	}
-
-	// call function the first time
-	var result interface{}
-	var fx *Closure
-	var ok bool
-	for closure := ctx.Closure; closure != nil; closure = closure.Parent {
-		// a defined function
-		fx, ok = closure.findFunction(c.CallName, ctx)
-		if ok {
-			result, err = evalFunctionCall(ctx, c, fx, args)
-			if err != nil {
-				return nil, err
-			}
-			break
-		}
-	}
-	if fx == nil {
-		return nil, lexer.Errorf(c.Pos, "Unknown function %s()", c.CallName)
-	}
-
-	// subsequent function calls
-	for i := 1; i < len(c.CallParams); i++ {
-		args, err := c.CallParams[i].evalParams(ctx)
-		if err != nil {
-			return nil, err
-		}
-		fx, ok := result.(*Closure)
-		if !ok {
-			return nil, lexer.Errorf(c.Pos, "Function call references non-function variable: %v", result)
-		}
-		result, err = evalFunctionCall(ctx, c, fx, args)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return result, nil
-}
-
 func (cmd *Let) Evaluate(ctx *Context) (interface{}, error) {
-	value, err := cmd.Value.Evaluate(ctx)
+	thevalue, err := cmd.Value.Evaluate(ctx)
 
 	if err != nil {
 		return nil, err
 	}
-	if cmd.Variable != nil {
-		for c := ctx.Closure; c != nil; c = c.Parent {
-			_, ok := c.Vars[*cmd.Variable]
+
+	if len(cmd.Variable.Suffixes) == 0 {
+		for closure := ctx.Closure; closure != nil; closure = closure.Parent {
+			_, ok := closure.Vars[cmd.Variable.Variable]
 			if ok {
-				// existing var
-				c.Vars[*cmd.Variable] = value
+				closure.Vars[cmd.Variable.Variable] = thevalue
 				return nil, nil
 			}
 		}
 		// new var
-		ctx.Closure.Vars[*cmd.Variable] = value
-	} else if cmd.ArrayElement != nil {
-		currentValue, err := cmd.ArrayElement.Variable.Evaluate(ctx)
-		if err != nil {
-			return nil, err
+		ctx.Closure.Vars[cmd.Variable.Variable] = thevalue
+		return nil, nil
+	}
+
+	// step 1: find the variable
+	value, err := cmd.Variable.findVar(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// step 2: function call or array/map reference
+	v := cmd.Variable
+	for suffixIndex, suffix := range v.Suffixes {
+
+		if value == nil {
+			return nil, lexer.Errorf(v.Pos, "Reference error %q", v.Variable)
 		}
 
-		for arrayIndexIndex, arrayIndex := range cmd.ArrayElement.Indexes {
-			ivalue, err := arrayIndex.Index.Evaluate(ctx)
+		lastOne := suffixIndex == len(v.Suffixes)-1
+
+		if suffix.CallParams != nil {
+			// function call
+			args, err := suffix.CallParams.evalParams(ctx)
 			if err != nil {
 				return nil, err
 			}
 
-			lastElement := arrayIndexIndex == len(cmd.ArrayElement.Indexes)-1
-
-			a, ok := currentValue.(*[]interface{})
+			// built-in function?
+			builtin, ok := value.(Builtin)
 			if ok {
-				// it's an array
-				index := (int)(ivalue.(float64))
-				if lastElement {
-					if index < 0 || index > len(*a) {
-						return nil, lexer.Errorf(cmd.Pos, "Index out of bounds")
-					}
-					if index < len(*a) {
-						(*a)[index] = value
-					} else {
-						*a = append(*a, value)
-					}
-				} else {
-					if index < 0 || index >= len(*a) {
-						return nil, lexer.Errorf(cmd.Pos, "Index out of bounds")
-					}
-					currentValue = (*a)[index]
+				value, err = builtin(ctx, args...)
+				if err != nil {
+					return nil, err
 				}
 			} else {
-				m, ok := currentValue.(map[string]interface{})
-				if ok {
-					key := ivalue.(string)
-					if lastElement {
-						m[key] = value
+				closure, ok := value.(*Closure)
+				if !ok {
+					return nil, lexer.Errorf(v.Pos, "function call made on variable that is not a function %q", v.Variable)
+				}
+				value, err = evalFunctionCall(ctx, v.Pos, closure, args)
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else if suffix.Index != nil {
+			// array or map index lookup
+			index, err := suffix.Index.Index.Evaluate(ctx)
+			if err != nil {
+				return nil, err
+			}
+			arr, ok := value.(*[]interface{})
+			if ok {
+				i, ok := index.(float64)
+				if !ok {
+					return nil, lexer.Errorf(v.Pos, "index for array should be a number %q", v.Variable)
+				}
+				if lastOne {
+					if int(i) < len(*arr) {
+						(*arr)[int(i)] = thevalue
 					} else {
-						currentValue = m[key]
+						*arr = append(*arr, thevalue)
 					}
+					return nil, nil
+				}
+				value = (*arr)[int(i)]
+			} else {
+				_map, ok := value.(map[string]interface{})
+				if ok {
+					s, ok := index.(string)
+					if !ok {
+						return nil, lexer.Errorf(v.Pos, "index for map should be a string %q", v.Variable)
+					}
+					if lastOne {
+						_map[s] = thevalue
+						return nil, nil
+					}
+					value = _map[s]
 				} else {
-					return nil, lexer.Errorf(cmd.Pos, "Invalid array element: should be an array or a map")
+					return nil, lexer.Errorf(v.Pos, "array index should reference array or map %q", v.Variable)
 				}
 			}
 		}
-	} else {
-		return nil, lexer.Errorf(cmd.Pos, "Let needs a variable or array element on the LHS.")
 	}
-	return nil, nil
+	return nil, lexer.Errorf(v.Pos, "Cannot assign value %q", v.Variable)
 }
 
 // Evaluate a Command.
@@ -650,14 +627,14 @@ func (cmd *Command) Evaluate(ctx *Context) (interface{}, error) {
 	case cmd.Fun != nil:
 		_, err := cmd.Fun.Evaluate(ctx)
 		return nil, err
+	case cmd.Variable != nil:
+		_, err := cmd.Variable.Evaluate(ctx)
+		return nil, err
 	case cmd.Del != nil:
 		_, err := cmd.Del.Evaluate(ctx)
 		return nil, err
 	case cmd.Return != nil:
 		return cmd.Return.Value.Evaluate(ctx)
-	case cmd.Call != nil:
-		_, err := cmd.Call.Evaluate(ctx)
-		return nil, err
 	case cmd.If != nil:
 		return cmd.If.Evaluate(ctx)
 	case cmd.While != nil:
@@ -684,51 +661,90 @@ func evalBlock(ctx *Context, commands []*Command) (interface{}, error) {
 }
 
 func (cmd *Del) Evaluate(ctx *Context) (interface{}, error) {
-	if cmd.ArrayElement != nil {
-		currentValue, err := cmd.ArrayElement.Variable.Evaluate(ctx)
-		if err != nil {
-			return nil, err
+	if len(cmd.Variable.Suffixes) == 0 {
+		return nil, lexer.Errorf(cmd.Pos, "Del needs an array or map index %q", cmd.Variable)
+	}
+
+	// step 1: find the variable
+	value, err := cmd.Variable.findVar(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// step 2: function call or array/map reference
+	v := cmd.Variable
+	for suffixIndex, suffix := range v.Suffixes {
+
+		if value == nil {
+			return nil, lexer.Errorf(v.Pos, "Reference error %q", v.Variable)
 		}
 
-		for arrayIndexIndex, arrayIndex := range cmd.ArrayElement.Indexes {
-			ivalue, err := arrayIndex.Index.Evaluate(ctx)
+		lastOne := suffixIndex == len(v.Suffixes)-1
+
+		if suffix.CallParams != nil {
+			// function call
+			args, err := suffix.CallParams.evalParams(ctx)
 			if err != nil {
 				return nil, err
 			}
 
-			lastElement := arrayIndexIndex == len(cmd.ArrayElement.Indexes)-1
-
-			a, ok := currentValue.(*[]interface{})
+			// built-in function?
+			builtin, ok := value.(Builtin)
 			if ok {
-				// it's an array
-				index := (int)(ivalue.(float64))
-				if index < 0 || index >= len(*a) {
-					return nil, lexer.Errorf(cmd.Pos, "Index out of bounds")
-				}
-				if lastElement {
-					*a = append((*a)[:index], (*a)[index+1:]...)
-				} else {
-					currentValue = (*a)[index]
+				value, err = builtin(ctx, args...)
+				if err != nil {
+					return nil, err
 				}
 			} else {
-				m, ok := currentValue.(map[string]interface{})
-				if ok {
-					key := ivalue.(string)
-					if lastElement {
-						delete(m, key)
-					} else {
-						currentValue = m[key]
+				closure, ok := value.(*Closure)
+				if !ok {
+					return nil, lexer.Errorf(v.Pos, "function call made on variable that is not a function %q", v.Variable)
+				}
+				value, err = evalFunctionCall(ctx, v.Pos, closure, args)
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else if suffix.Index != nil {
+
+			// array or map index lookup
+			index, err := suffix.Index.Index.Evaluate(ctx)
+			if err != nil {
+				return nil, err
+			}
+			arr, ok := value.(*[]interface{})
+			if ok {
+				i, ok := index.(float64)
+				if !ok {
+					return nil, lexer.Errorf(v.Pos, "index for array should be a number %q", v.Variable)
+				}
+				if lastOne {
+					if int(i) < len(*arr) {
+						*arr = append((*arr)[:int(i)], (*arr)[int(i)+1:]...)
+						return nil, nil
 					}
+					return nil, lexer.Errorf(v.Pos, "index out of bounds %q", v.Variable)
+				}
+				value = (*arr)[int(i)]
+			} else {
+				_map, ok := value.(map[string]interface{})
+				if ok {
+					s, ok := index.(string)
+					if !ok {
+						return nil, lexer.Errorf(v.Pos, "index for map should be a string %q", v.Variable)
+					}
+					if lastOne {
+						delete(_map, s)
+						return nil, nil
+					}
+					value = _map[s]
 				} else {
-					return nil, lexer.Errorf(cmd.Pos, "Invalid array element: should be an array or a map")
+					return nil, lexer.Errorf(v.Pos, "array index should reference array or map %q", v.Variable)
 				}
 			}
 		}
-	} else {
-		// in the future, del can take other types (map, maybe struct, etc)
-		return nil, lexer.Errorf(cmd.Pos, "can't delete this type of expression")
 	}
-	return nil, nil
+	return nil, lexer.Errorf(v.Pos, "Cannot delete %q", v.Variable)
 }
 
 func (whilecommand *While) Evaluate(ctx *Context) (interface{}, error) {
@@ -964,19 +980,15 @@ func (program *Program) init(ctx *Context, source string) (*Context, error) {
 func (program *Program) Evaluate(ctx *Context) (interface{}, error) {
 
 	// Call main()
-	main := "main"
-	call := &Call{
-		CallName: &CallName{
-			NameOrVariable: &main,
-			ArrayElement:   nil,
-		},
-		CallParams: []*CallParams{
-			&CallParams{
-				Args: []*Expression{},
+	v := &Variable{
+		Variable: "main",
+		Suffixes: []*VariableSuffix{
+			&VariableSuffix{
+				CallParams: &CallParams{},
 			},
 		},
 	}
-	return call.Evaluate(ctx)
+	return v.Evaluate(ctx)
 }
 
 func evaluateFloats(ctx *Context, lhs interface{}, rhsExpr Evaluatable) (float64, float64, error) {

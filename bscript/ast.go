@@ -50,20 +50,20 @@ type AnonFun struct {
 type Command struct {
 	Pos lexer.Position
 
-	Remark *Remark `(   @@ `
-	Let    *Let    `  | @@ ";" `
-	Del    *Del    `  | @@ ";" `
-	Return *Return `  | @@ ";" `
-	If     *If     `  | @@ `
-	While  *While  `  | @@ `
-	Fun    *Fun    `  | @@ `
-	Call   *Call   `  | @@ ";" )`
+	Remark   *Remark   `(   @@ `
+	Del      *Del      `  | @@ ";" `
+	Return   *Return   `  | @@ ";" `
+	If       *If       `  | @@ `
+	While    *While    `  | @@ `
+	Fun      *Fun      `  | @@`
+	Variable *Variable `  | @@ ";"`
+	Let      *Let      `  | @@ ";" )`
 }
 
 type Del struct {
 	Pos lexer.Position
 
-	ArrayElement *ArrayElement `"del" @@`
+	Variable *Variable `"del" @@`
 }
 
 type While struct {
@@ -87,31 +87,11 @@ type Remark struct {
 	Comment string `@Comment`
 }
 
-type Call struct {
-	Pos lexer.Position
-
-	CallName   *CallName     `@@`
-	CallParams []*CallParams `( @@ )+`
-}
-
-type CallName struct {
-	Pos            lexer.Position
-	ArrayElement   *ArrayElement `@@`
-	NameOrVariable *string       `| @Ident`
-}
-
-type CallParams struct {
-	Pos lexer.Position
-
-	Args []*Expression `"(" [ @@ { "," @@ } ] ")"`
-}
-
 type Let struct {
 	Pos lexer.Position
 
-	ArrayElement *ArrayElement `( @@ `
-	Variable     *string       `| @Ident )`
-	Value        *Expression   `":" "=" @@`
+	Variable *Variable   `@@`
+	Value    *Expression `":" "=" @@`
 }
 
 type Return struct {
@@ -136,8 +116,6 @@ type Value struct {
 	Null          *string       `| @"null"`
 	Number        *SignedNumber `| @@`
 	Boolean       *string       `| @("true" | "false")`
-	Call          *Call         `| @@`
-	ArrayElement  *ArrayElement `| @@`
 	Variable      *Variable     `| @@`
 	String        *string       `| @String`
 	Subexpression *Expression   `| "(" @@ ")"`
@@ -153,14 +131,21 @@ type SignedNumber struct {
 type Variable struct {
 	Pos lexer.Position
 
-	Variable string `@Ident`
+	Variable string            `@Ident`
+	Suffixes []*VariableSuffix `( @@ )*`
 }
 
-type ArrayElement struct {
+type VariableSuffix struct {
 	Pos lexer.Position
 
-	Variable *Variable     `@@`
-	Indexes  []*ArrayIndex `( @@ )+`
+	Index      *ArrayIndex `@@`
+	CallParams *CallParams `| @@`
+}
+
+type CallParams struct {
+	Pos lexer.Position
+
+	Args []*Expression `"(" [ @@ { "," @@ } ] ")"`
 }
 
 type ArrayIndex struct {

@@ -73,5 +73,13 @@ def main() {
     withcomma := [1,2,3,];
     trace("with comma=" + withcomma);
 
-    print("Done");
+    a := [ 1, 2, "a", x => x * 2 ];
+    trace(a[0]);
+    trace(a[1]);
+    trace(a[2]);
+
+    trace(a[3](15));
+    assert(a[3](15), 30);
+
+    trace("Done");
 }
