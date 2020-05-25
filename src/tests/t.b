@@ -26,4 +26,10 @@ def main() {
 
     del a[3][1];
     trace(a);
+
+    a[1] := { "a": 1, "b": 2, "c": 3 };
+    trace(a);
+    trace(a[1].b);
+
+    trace("done");
 }
