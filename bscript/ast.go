@@ -259,7 +259,7 @@ var (
 		participle.Lexer(benjiLexer),
 		participle.CaseInsensitive("Ident"),
 		participle.Unquote("String"),
-		participle.UseLookahead(8),
+		participle.UseLookahead(100),
 		participle.Elide("Whitespace"),
 	)
 
@@ -267,7 +267,7 @@ var (
 		participle.Lexer(benjiLexer),
 		participle.CaseInsensitive("Ident"),
 		participle.Unquote("String"),
-		participle.UseLookahead(8),
+		participle.UseLookahead(100),
 		participle.Elide("Whitespace"),
 	)
 )

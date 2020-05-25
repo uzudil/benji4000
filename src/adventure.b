@@ -79,18 +79,13 @@ def direction_command(action) {
 
 # if the transition is allowed, return 1, else 0
 def room_transition(proposed_room) {
-    # todo: need AND/OR handling
-    if(proposed_room = GRASSY_FIELD) {
-        if(current_room = SMALL_ROOM) {
-            if(door_locked = 1){
-                if(has_object("key") = 1) {
-                    door_locked := 0;
-                    print("You use your key to unlock the door.");
-                } else {
-                    print("A locked door prevents you from going outside.");
-                    return 0;
-                }
-            }
+    if(proposed_room = GRASSY_FIELD && current_room = SMALL_ROOM && door_locked = 1){
+        if(has_object("key") = 1) {
+            door_locked := 0;
+            print("You use your key to unlock the door.");
+        } else {
+            print("A locked door prevents you from going outside.");
+            return 0;
         }
     }
     return 1;
@@ -142,7 +137,7 @@ def drop_object(name) {
     print("You are not carrying that.");
 }
 
-def inventory() {
+def showInventory() {
     if(len(inventory) > 0) {
         print("You are carrying:");
         i := 0;
@@ -226,7 +221,7 @@ def main() {
                 handled := 1;
             }
             if(substr(action, 0, 3) = "inv") {
-                inventory();
+                showInventory();
                 handled := 1;
             }
             if(substr(action, 0, 4) = "help") {

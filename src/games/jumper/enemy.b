@@ -31,7 +31,7 @@ perRoom := [
 enemyInstances := [];
 
 def initEnemies() {
-    # todo: remove old sprites + data
+    # remove old sprites + data
     i := 0;
     while(i < len(enemyInstances)) {
         delSprite(enemyInstances[i].sprite);

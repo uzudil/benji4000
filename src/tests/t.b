@@ -31,5 +31,13 @@ def main() {
     trace(a);
     trace(a[1].b);
 
+    trace("a[5][len(a[5]) - 1]=" + a[5][len(a[5]) - 1]);
+    last := len(a[5]);
+    a[5][last] := "xxx";
+    trace(a);
+    
+    a[5][len(a[5])] := "yyy";
+    trace(a);
+
     trace("done");
 }
