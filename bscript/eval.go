@@ -217,6 +217,13 @@ func (v *Variable) Evaluate(ctx *Context) (interface{}, error) {
 					return nil, lexer.Errorf(v.Pos, "array index should reference array or map %q", v.Variable)
 				}
 			}
+		} else if suffix.MapKey != nil {
+			_map, ok := value.(map[string]interface{})
+			if ok {
+				value = _map[suffix.MapKey.Key]
+			} else {
+				return nil, lexer.Errorf(v.Pos, "map key should reference a map %q", v.Variable)
+			}
 		}
 	}
 	return value, nil
@@ -608,6 +615,17 @@ func (cmd *Let) Evaluate(ctx *Context) (interface{}, error) {
 					return nil, lexer.Errorf(v.Pos, "array index should reference array or map %q", v.Variable)
 				}
 			}
+		} else if suffix.MapKey != nil {
+			_map, ok := value.(map[string]interface{})
+			if ok {
+				if lastOne {
+					_map[suffix.MapKey.Key] = thevalue
+					return nil, nil
+				}
+				value = _map[suffix.MapKey.Key]
+			} else {
+				return nil, lexer.Errorf(v.Pos, "map key should reference a map %q", v.Variable)
+			}
 		}
 	}
 	return nil, lexer.Errorf(v.Pos, "Cannot assign value %q", v.Variable)
@@ -741,6 +759,17 @@ func (cmd *Del) Evaluate(ctx *Context) (interface{}, error) {
 				} else {
 					return nil, lexer.Errorf(v.Pos, "array index should reference array or map %q", v.Variable)
 				}
+			}
+		} else if suffix.MapKey != nil {
+			_map, ok := value.(map[string]interface{})
+			if ok {
+				if lastOne {
+					delete(_map, suffix.MapKey.Key)
+					return nil, nil
+				}
+				value = _map[suffix.MapKey.Key]
+			} else {
+				return nil, lexer.Errorf(v.Pos, "map key should reference a map %q", v.Variable)
 			}
 		}
 	}

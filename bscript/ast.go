@@ -139,7 +139,13 @@ type VariableSuffix struct {
 	Pos lexer.Position
 
 	Index      *ArrayIndex `@@`
+	MapKey     *MapKey     `| @@`
 	CallParams *CallParams `| @@`
+}
+
+type MapKey struct {
+	Pos lexer.Position
+	Key string `"." @Ident`
 }
 
 type CallParams struct {

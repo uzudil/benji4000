@@ -64,5 +64,24 @@ def main() {
     withcomma := { "a": 1, "b": 2, };
     trace("with comma:" + withcomma);
 
+    # dot notation
+    assert(withcomma.a, 1);
+    assert(withcomma.b, 2);
+    trace("dot notation: " + withcomma.b);
+    withcomma.helloworld := 123;
+    trace("dot notation, new key: " + withcomma.helloworld);
+    withcomma.amap := { "z": 23, "x": 42 };
+    trace("dot notation, multiples: z=" + withcomma.amap.z + " x=" + withcomma.amap.x);
+    withcomma.amap.z := 100;
+    assert(withcomma.amap.z, 100);
+    trace("dot notation, multiples, changed z: z=" + withcomma.amap.z + " x=" + withcomma.amap.x);
+
+    withcomma.list := [1,2,3];
+    # this fails:
+    trace("dot notation list " + withcomma.list[1]);
+    # so does this (it would also fail with array notation):
+    withcomma.fx := x => x * 2;
+    trace("dot notation function: " + withcomma.fx(10));
+
     print("Done");
 }
