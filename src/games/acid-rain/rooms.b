@@ -110,7 +110,7 @@ def checkDoors(x1, y1, x2, y2) {
 
 def openGate() {
     r := getBoundingBox(BLOCK_KEY, doorBlockIndex);
-    drawImage(r[0], r[1], img[blockDefs["o"][0]]);
+    drawImage(r[0], r[1], img[blockDefs.o[0]]);
     addBoundingBox(DOOR_KEY, r[0], r[1], r[2], r[3]);
     delBoundingBox(BLOCK_KEY, doorBlockIndex);
     updateVideo();

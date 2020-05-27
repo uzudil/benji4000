@@ -40,43 +40,43 @@ def moveDrops() {
      i := 0;
      while(i < len(drops)) {
         e := drops[i];
-        if (getTicks() > e["choice_timer"]) {
-            if (e["active"] = 0) {
-                e["active"] := canDrop();
+        if (getTicks() > e.choice_timer) {
+            if (e.active = 0) {
+                e.active := canDrop();
             }
-            e["choice_timer"] := getTicks() + e["choice_speed"];
-            e["choice_speed"] := random();
+            e.choice_timer := getTicks() + e.choice_speed;
+            e.choice_speed := random();
         }
-        if(getTicks() > e["timer"]) {
-            e["imageIndex"] := e["imageIndex"] + e["animationSteps"];
-            if(e["imageIndex"] >= e["imageCount"]) {
-                e["imageIndex"] := 0;
+        if(getTicks() > e.timer) {
+            e.imageIndex := e.imageIndex + e.animationSteps;
+            if(e.imageIndex >= e.imageCount) {
+                e.imageIndex := 0;
             }
-            e["timer"] := getTicks() + e["speed"];
+            e.timer := getTicks() + e.speed;
 
             # move
-            if (e["active"] = 1) {
-                if(e["dirX"] != 0) {
-                    e["x"] := e["x"] + e["dirX"];
+            if (e.active = 1) {
+                if(e.dirX != 0) {
+                    e.x := e.x + e.dirX;
                 } else {
-                    e["y"] := e["y"] + e["dirY"];
+                    e.y := e.y + e.dirY;
                 }
-                if(checkBlocks(e["x"] - e["w"]/2, 
-                    e["y"] - e["h"]/2, 
-                    e["x"] + e["w"]/2, 
-                    e["y"] + e["h"]/2)) {
-                    e["active"] := 0;
-                    e["x"] := e["start_x"];
-                    e["y"] := e["start_y"];
+                if(checkBlocks(e.x - e.w/2, 
+                    e.y - e.h/2, 
+                    e.x + e.w/2, 
+                    e.y + e.h/2)) {
+                    e.active := 0;
+                    e.x := e.start_x;
+                    e.y := e.start_y;
                     if ((random() * 100) % 3 = 0) {
-                        e["speed"] := e["speed"] + (random() * .01);
+                        e.speed := e.speed + (random() * .01);
                     } else {
-                        e["speed"] := e["speed"] - (random() * .01);
+                        e.speed := e.speed - (random() * .01);
                     }
                     points := points + 1;
                 }
             }
-            drawSprite(e["x"], e["y"], e["sprite"], e["imageIndex"], 0, 0);
+            drawSprite(e.x, e.y, e.sprite, e.imageIndex, 0, 0);
         }
         i := i + 1;
      }
@@ -86,7 +86,7 @@ def moveDrops() {
 def checkDropCollision(playerSprite) {
     i := 0;
     while(i < len(drops)) {
-        if(checkSpriteCollision(playerSprite, drops[i]["sprite"])) {
+        if(checkSpriteCollision(playerSprite, drops[i].sprite)) {
             return true;
         }
         i := i + 1;
