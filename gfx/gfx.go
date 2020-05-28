@@ -468,9 +468,9 @@ func (gfx *Gfx) SetSprite(index int, imgs []map[string]interface{}) error {
 				pixels[idx] = gfx.Colors[data[i]*3]
 				pixels[idx+1] = gfx.Colors[data[i]*3+1]
 				pixels[idx+2] = gfx.Colors[data[i]*3+2]
-				alpha = 1
+				alpha = 0xff
 				if data[i] == 0 {
-					alpha = 0
+					alpha = 0x00
 				}
 				pixels[idx+3] = alpha
 			}
@@ -480,18 +480,19 @@ func (gfx *Gfx) SetSprite(index int, imgs []map[string]interface{}) error {
 				pixels[idx] = gfx.Colors[data[i]*3]
 				pixels[idx+1] = gfx.Colors[data[i]*3+1]
 				pixels[idx+2] = gfx.Colors[data[i]*3+2]
-				alpha = 1
+				alpha = 0xff
 				if data[i] == 0 {
-					alpha = 0
+					alpha = 0x00
 				}
 				pixels[idx+3] = alpha
+
 				idx = ((i * 2) + 1) * 4
 				pixels[idx] = gfx.Colors[data[i]*3]
 				pixels[idx+1] = gfx.Colors[data[i]*3+1]
 				pixels[idx+2] = gfx.Colors[data[i]*3+2]
-				alpha = 1
+				alpha = 0xff
 				if data[i] == 0 {
-					alpha = 0
+					alpha = 0x00
 				}
 				pixels[idx+3] = alpha
 			}
@@ -672,10 +673,10 @@ func (gfx *Gfx) ClearVideo() error {
 func (gfx *Gfx) UpdateVideo() error {
 	gfx.Render.Lock.Lock()
 	for index, colorIndex := range gfx.VideoMemory {
-		gfx.Render.PixelMemory[index*4] = gfx.Colors[colorIndex*3]
-		gfx.Render.PixelMemory[index*4+1] = gfx.Colors[colorIndex*3+1]
-		gfx.Render.PixelMemory[index*4+2] = gfx.Colors[colorIndex*3+2]
-		gfx.Render.PixelMemory[index*4+3] = 1
+		gfx.Render.PixelMemory[index*3] = gfx.Colors[colorIndex*3]
+		gfx.Render.PixelMemory[index*3+1] = gfx.Colors[colorIndex*3+1]
+		gfx.Render.PixelMemory[index*3+2] = gfx.Colors[colorIndex*3+2]
+		// gfx.Render.PixelMemory[index*4+3] = 0
 	}
 	gfx.Render.Lock.Unlock()
 	// runtime.Gosched()

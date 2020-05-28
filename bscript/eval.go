@@ -456,6 +456,7 @@ func varEval(ctx *Context, v *Variable, newValue *interface{}, isDelete bool) (i
 	}
 
 	// step 2: function call or array/map reference
+	var parent interface{}
 	for suffixIndex, suffix := range v.Suffixes {
 
 		if value == nil {
@@ -471,9 +472,18 @@ func varEval(ctx *Context, v *Variable, newValue *interface{}, isDelete bool) (i
 				return nil, err
 			}
 
+			// if we're referencing a map, add the "self" parameter to the front of the args
+			if parent != nil {
+				_, ismap := parent.(map[string]interface{})
+				if ismap {
+					args = append([]interface{}{parent}, args...)
+				}
+			}
+
 			// built-in function?
 			builtin, ok := value.(Builtin)
 			if ok {
+				parent = value
 				value, err = builtin(ctx, args...)
 				if err != nil {
 					return nil, err
@@ -483,6 +493,7 @@ func varEval(ctx *Context, v *Variable, newValue *interface{}, isDelete bool) (i
 				if !ok {
 					return nil, lexer.Errorf(v.Pos, "function call made on variable that is not a function %q", v.Variable)
 				}
+				parent = value
 				value, err = evalFunctionCall(ctx, v.Pos, closure, args)
 				if err != nil {
 					return nil, err
@@ -516,6 +527,7 @@ func varEval(ctx *Context, v *Variable, newValue *interface{}, isDelete bool) (i
 					}
 					return nil, nil
 				}
+				parent = value
 				value = (*arr)[int(i)]
 			} else {
 				_map, ok := value.(map[string]interface{})
@@ -532,6 +544,7 @@ func varEval(ctx *Context, v *Variable, newValue *interface{}, isDelete bool) (i
 						}
 						return nil, nil
 					}
+					parent = value
 					value = _map[s]
 				} else {
 					return nil, lexer.Errorf(v.Pos, "array index should reference array or map %q", v.Variable)
@@ -548,6 +561,7 @@ func varEval(ctx *Context, v *Variable, newValue *interface{}, isDelete bool) (i
 					}
 					return nil, nil
 				}
+				parent = value
 				value = _map[suffix.MapKey.Key]
 			} else {
 				return nil, lexer.Errorf(v.Pos, "map key should reference a map %q", v.Variable)
