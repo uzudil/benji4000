@@ -1,22 +1,29 @@
 const SPEED = 0.015;
 const ANIM_STEPS = 0.2;
-const WIDTH = 30;
-const HEIGHT = 20;
 const BLOCK_W = 8;
 const BLOCK_H = 16;
 const SCREEN_W = int(160/BLOCK_W)*BLOCK_W;
 const SCREEN_H = int(200/BLOCK_H)*BLOCK_H;
+const SW = SCREEN_W/BLOCK_W;
+const SH = SCREEN_H/BLOCK_H;
 const EMPTY = -1;
 const ICE = 0;
 const ROCK = 1;
 const BRICK = 2;
-const IMG = [ "ice", "rock", "brick" ];
+const GEM = 3;
+const IMG = [ "ice", "rock", "brick", "gem" ];
 const ROCK_FALL_SPEED = 0.015;
 const DEBUG = false;
+const FADE_STEPS = 10;
+
+WIDTH := 0;
+HEIGHT := 0;
 
 player := {
-    "x": WIDTH/2 * BLOCK_W,
-    "y": HEIGHT/2 * BLOCK_H,
+    "lives": 3,
+    "score": 0,
+    "x": 0,
+    "y": 0,
     "flipX": 0,
     "flipY": 0,
     "moveX": 0,
@@ -24,6 +31,9 @@ player := {
     "imgIndex": 0,
     "sprite": 0,
     "timer": 0,
+    "clear": self => {
+        drawSprite(-1000, -1000, self.sprite, self.imgIndex, self.flipX, self.flipY);
+    },
     "draw": self => {
         if(self.moveX = 1) {
             self.flipX := 1;
@@ -92,8 +102,11 @@ player := {
             if(self.moveY != 0 || self.moveX != 0) {
                 bx := int(self.x/BLOCK_W+0.5);
                 by := int(self.y/BLOCK_H+0.5);
+                if(room.blocks[bx][by].block = GEM) {
+                    room.takeGem();
+                }
                 room.blocks[bx][by].block := EMPTY;
-                if(room.blocks[bx][by-1].block = ROCK) {
+                if(room.blocks[bx][by-1].block = ROCK || room.blocks[bx][by-1].block = GEM) {
                     room.startFalling(bx, by - 1);
                 }
                 self.draw();
@@ -107,33 +120,84 @@ player := {
 };
 
 room := {
+    "roomIndex": 0,
+    "gems": 0,
     "blocks": [],
     "willfall": [],
     "falling": [],
     "timer": 0,
+    "fade": 0,
+    "fadeDir": 0,
     "init": self => {
+        r := ROOMS[self.roomIndex];
+        self.fadeDir := 1;
+        self.fade := 0;
+        self.timer := 0;
+
+        WIDTH := len(r[0]);
+        HEIGHT := len(r);
+        self.blocks := [];
+        self.gems := 0;
         x := 0;
         while(x < WIDTH) {
             self.blocks[x] := [];
-            y := 0;
-            while(y < HEIGHT) {
-                block := int(random() * 2);
-                if(x = 0 || x = WIDTH - 1 || y = 0 || y = HEIGHT - 1) {
-                    block := BRICK;
+            x := x + 1;
+        }
+
+        row := 0;
+        while(row < HEIGHT) {
+            x := 0;
+            while(x < WIDTH) {
+                c := substr(r[row], x, 1);
+
+                b := ICE;
+                if(c = "2") {
+                    b := BRICK;
                 }
-                if(abs(player.x/BLOCK_W - x) <= 2 && abs(player.y/BLOCK_H - y) <= 2) {
-                    block := ICE;
-                }                
-                self.blocks[x][y] := {
-                    "block": block,
+                if(c = "1") {
+                    b := ROCK;
+                }
+                if(c = "d") {
+                    b := GEM;
+                    self.gems := self.gems + 1;
+                }
+                if(c = "p") {
+                    player.x := x * BLOCK_W;
+                    player.y := row * BLOCK_H;
+                }
+                self.blocks[x][row] := {
+                    "block": b,
                     "dy": 0
                 };
-                y := y + 1;
+                x := x + 1;
             }
-            x := x + 1;
+            row := row + 1;
         }
     },
     "draw": self => {
+        if(self.fadeDir != 0) {
+            if(getTicks() < self.timer) {
+                return false;
+            }
+            if(self.fadeDir = 1 && self.fade = 0) {
+                self.timer := getTicks() + 2;
+            } else {
+                self.timer := getTicks() + 0.1;
+            }
+            self.fade := self.fade + self.fadeDir;
+            if(self.fadeDir = 1 && self.fade >= FADE_STEPS) {
+                self.fadeDir := 0;
+                player.draw();
+            }
+            if(self.fadeDir = -1 && self.fade <= 0) {
+                self.roomIndex := self.roomIndex + 1;
+                player.clear();
+                if(self.roomIndex < len(ROOMS)) {
+                    self.init();
+                }
+            }
+        }
+
         sx := (player.x - SCREEN_W/2)/BLOCK_W;
         ex := sx + SCREEN_W/BLOCK_W + 1;
         sy := (player.y-SCREEN_H/2)/BLOCK_H;
@@ -165,8 +229,39 @@ room := {
         fillRect(0, SCREEN_H, 160, 200, COLOR_BLACK);
         deltaX := player.x % BLOCK_W;
         deltaY := player.y % BLOCK_H;
-        drawText(0, SCREEN_H, COLOR_WHITE, COLOR_BLACK, deltaX + "," + deltaY);
+        drawText(120, SCREEN_H, COLOR_WHITE, COLOR_BLACK, "Life" + player.lives);
+        drawText(60, SCREEN_H, COLOR_WHITE, COLOR_BLACK, "Room" + (self.roomIndex + 1));
+        drawText(0, SCREEN_H, COLOR_WHITE, COLOR_BLACK, "Gems" + self.gems);
+
+        # fade overlay
+        if(self.fadeDir != 0) {
+            x := 0;
+            while(x < SW) {
+                y := 0;
+                while(y < SH) {
+                    # dx,dy = distance from middle
+                    dx := int(abs(x - SW/2));
+                    dy := int(abs(y - SH/2));
+                    mx := int(SW/2 / FADE_STEPS * self.fade);
+                    my := int(SH/2 / FADE_STEPS * self.fade);
+                    if(dx >= mx || dy >= my) {
+                        drawImage(x * BLOCK_W, y * BLOCK_H, img["rock"]);
+                    }
+                    y := y + 1;
+                }
+                x := x + 1;
+            }
+        }
+
         updateVideo();
+    },
+    "takeGem": self => {
+        self.gems := self.gems - 1;
+        if(self.gems <= 0) {
+            self.fadeDir := -1;
+            self.fade := FADE_STEPS;
+            self.timer := 0;
+        }
     },
     "startFalling": (self, bx, by) => {
         i := 0;
@@ -206,16 +301,16 @@ room := {
 
                     # transfer to next block
                     if(self.blocks[bx][by].dy >= BLOCK_H/2) {
-                        if(self.blocks[bx][by - 1].block = ROCK) {
+                        if(self.blocks[bx][by - 1].block = ROCK || self.blocks[bx][by - 1].block = GEM) {
                             self.startFalling(bx, by - 1);
                         }
+                        self.blocks[bx][by + 1] := {
+                            "block": self.blocks[bx][by].block,
+                            "dy": BLOCK_H / -2
+                        };
                         self.blocks[bx][by] := {
                             "block": EMPTY,
                             "dy": 0
-                        };
-                        self.blocks[bx][by + 1] := {
-                            "block": ROCK,
-                            "dy": BLOCK_H / -2
                         };
                         self.falling[i][1] := by + 1;
                     }
@@ -247,12 +342,15 @@ def main() {
 
     room.init();
     room.draw();
-    player.draw();
 
-    while(true) {
-        a := player.move();
-        b := room.moveRocks();
-        if(a || b) {
+    while(room.roomIndex < len(ROOMS)) {
+        if(room.fadeDir = 0) {
+            a := player.move();
+            b := room.moveRocks();
+            if(a || b) {
+                room.draw();
+            }
+        } else {
             room.draw();
         }
     }
