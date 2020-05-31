@@ -2,9 +2,7 @@
 The "other" lost personal computer of the 80s. 
 It was similar to the better known C64 but programmed in a higher-level (and much more imaginary) language.
 
-<img src="screenshots/jumper.gif" width=320>
-
-<img src="screenshots/extmode.png" width=320>
+<img src="screenshots/jumper.gif" width=320> <img src="screenshots/extmode.png" width=320> <img src="screenshots/icicle.png" width=320>
 
 # To build the code
 `go build`
