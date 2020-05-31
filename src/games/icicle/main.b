@@ -133,7 +133,8 @@ room := {
         self.fadeDir := 1;
         self.fade := 0;
         self.timer := 0;
-
+        self.willfall := [];
+        self.falling := [];
         WIDTH := len(r[0]);
         HEIGHT := len(r);
         self.blocks := [];
