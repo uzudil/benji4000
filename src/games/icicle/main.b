@@ -272,7 +272,7 @@ room := {
             }
             i := i + 1;
         }
-        self.willfall[len(self.willfall)] := [bx, by, getTicks() + 0.5];
+        self.willfall[len(self.willfall)] := [bx, by, getTicks() + 0.25];
         return true;
     },
     "moveRocks": self => {
@@ -332,7 +332,6 @@ def main() {
 
     # ice blue
     setColor(COLOR_LIGHT_BLUE, 216, 216, 255);
-
     setBackground(COLOR_LIGHT_BLUE);
     clearVideo();
 
