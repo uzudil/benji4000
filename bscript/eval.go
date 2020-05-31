@@ -528,6 +528,9 @@ func varEval(ctx *Context, v *Variable, newValue *interface{}, isDelete bool) (i
 					return nil, nil
 				}
 				parent = value
+				if int(i) >= len(*arr) {
+					return nil, lexer.Errorf(v.Pos, "index out of bounds %q", v.Variable)
+				}
 				value = (*arr)[int(i)]
 			} else {
 				_map, ok := value.(map[string]interface{})
