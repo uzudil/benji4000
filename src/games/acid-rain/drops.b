@@ -21,9 +21,9 @@ def initDrops() {
             "dirX": 0,
             "dirY": 1,
             "imageIndex": 0,
-            "imageCount": 1,
+            "imageCount": 3,
             "speed": 0.04,
-            "animationSteps": 0.2,
+            "animationSteps": 0.4,
             "active": canDrop()
         };
         i := i + 1;
@@ -48,32 +48,34 @@ def moveDrops() {
             e.choice_speed := random();
         }
         if(getTicks() > e.timer) {
-            e.imageIndex := e.imageIndex + e.animationSteps;
-            if(e.imageIndex >= e.imageCount) {
-                e.imageIndex := 0;
-            }
             e.timer := getTicks() + e.speed;
 
             # move
             if (e.active = 1) {
-                if(e.dirX != 0) {
-                    e.x := e.x + e.dirX;
-                } else {
-                    e.y := e.y + e.dirY;
-                }
-                if(checkBlocks(e.x - e.w/2, 
-                    e.y - e.h/2, 
-                    e.x + e.w/2, 
-                    e.y + e.h/2)) {
-                    e.active := 0;
-                    e.x := e.start_x;
-                    e.y := e.start_y;
-                    if ((random() * 100) % 3 = 0) {
-                        e.speed := e.speed + (random() * .01);
+                if(hitBottom(e)) {
+                    if(e.imageIndex >= e.imageCount) {
+                        e.imageIndex := 0;
+                        e.active := 0;
+                        e.x := e.start_x;
+                        e.y := e.start_y;
+
+                        points := points + 1;
+
+                        if ((random() * 100) % 3 = 0) {
+                            e.speed := e.speed + (random() * .01);
+                        } else {
+                            e.speed := e.speed - (random() * .01);
+                        }
+
                     } else {
-                        e.speed := e.speed - (random() * .01);
+                        e.imageIndex := e.imageIndex + e.animationSteps;
                     }
-                    points := points + 1;
+                } else {
+                    if(e.dirX != 0) {
+                        e.x := e.x + e.dirX;
+                    } else {
+                        e.y := e.y + e.dirY;
+                    }
                 }
             }
             drawSprite(e.x, e.y, e.sprite, e.imageIndex, 0, 0);
@@ -81,6 +83,13 @@ def moveDrops() {
         i := i + 1;
      }
      return points;
+}
+
+def hitBottom(e) {
+    if (checkBlocks(e.x - e.w/2, e.y - e.h/2, e.x + e.w/2, e.y + e.h/2)) {
+        return true;
+    }
+    return false;
 }
 
 def checkDropCollision(playerSprite) {
