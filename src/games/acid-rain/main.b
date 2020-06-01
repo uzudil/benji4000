@@ -60,7 +60,7 @@ def initGame() {
     initDrops();
     i := 0;
     while (i < len(drops)) {
-        setSprite(drops[i].sprite, [img.drop]);
+        setSprite(drops[i].sprite, [img.drop, img.drop2, img.drop3, img.drop4]);
         i := i + 1;
     }
 }
