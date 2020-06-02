@@ -104,9 +104,10 @@ player := {
                 by := int(self.y/BLOCK_H+0.5);
                 if(room.blocks[bx][by].block = GEM) {
                     room.takeGem();
+                    room.removeFalling(bx, by);
                 }
                 room.blocks[bx][by].block := EMPTY;
-                if(room.blocks[bx][by-1].block = ROCK || room.blocks[bx][by-1].block = GEM) {
+                if(room.blocks[bx][by - 1].block = ROCK || room.blocks[bx][by - 1].block = GEM) {
                     room.startFalling(bx, by - 1);
                 }
                 self.draw();
@@ -157,6 +158,9 @@ room := {
                 }
                 if(c = "1") {
                     b := ROCK;
+                }
+                if(c = ".") {
+                    b := EMPTY;
                 }
                 if(c = "d") {
                     b := GEM;
@@ -264,61 +268,138 @@ room := {
             self.timer := 0;
         }
     },
+    "startFallingAbove": (self, bx, by) => {
+        ii := -1;
+        while(ii <= 1) {
+            if(self.blocks[bx + ii][by - 1].block = ROCK || self.blocks[bx + ii][by - 1].block = GEM) {
+                self.startFalling(bx + ii, by - 1);
+            }
+            ii := ii + 1;
+        }
+    },
     "startFalling": (self, bx, by) => {
-        i := 0;
-        while(i < len(self.willfall)) {
-            if(self.willfall[i][0] = bx && self.willfall[i][1] = by) {
+        ti := 0;
+        while(ti < len(self.willfall)) {
+            if(self.willfall[ti][0] = bx && self.willfall[ti][1] = by) {
                 return false;
             }
-            i := i + 1;
+            ti := ti + 1;
         }
         self.willfall[len(self.willfall)] := [bx, by, getTicks() + 0.25];
         return true;
+    },
+    "removeFalling": (self, bx, by) => {
+        ri := 0;
+        while(ri < len(self.willfall)) {
+            if(self.willfall[ri][0] = bx && self.willfall[ri][1] = by) {
+                del self.willfall[ri];
+            } else {
+                ri := ri + 1;
+            }
+        }
+        ri := 0;
+        while(ri < len(self.falling)) {
+            if(self.falling[ri][0] = bx && self.falling[ri][1] = by) {
+                del self.falling[ri];
+            } else {
+                ri := ri + 1;
+            }
+        }
+    },
+    "moveBlock": (self, bx, by, xx, yy, dy, fallIndex) => {
+        px := int(player.x/BLOCK_W+0.5);
+        py := int(player.y/BLOCK_H+0.5);
+        b := self.blocks[bx][by].block;
+        self.blocks[bx][by] := {
+            "block": EMPTY,
+            "dy": 0
+        };
+        if(b = GEM && px = bx + xx && py = by + yy) {
+            self.takeGem();
+            return true;
+        } else {
+            if(self.blocks[bx + xx][by + yy].block != EMPTY) {
+                trace("ERROR! xx=" + xx + " yy=" + yy + " dy=" + dy + " block=" + bx + "," + by + " player=" + px + "," + py);
+            }
+            self.blocks[bx + xx][by + yy] := {
+                "block": b,
+                "dy": dy
+            };
+            self.falling[fallIndex][0] := bx + xx;
+            self.falling[fallIndex][1] := by + yy;
+            return false;
+        }
     },
     "moveRocks": self => {
         ret := false;
         if(getTicks() > self.timer && (len(self.falling) > 0 || len(self.willfall) > 0)) {
 
-            i := 0;
-            while(i < len(self.willfall)) {
-                if(getTicks() > self.willfall[i][2]) {
-                    self.falling[len(self.falling)] := [self.willfall[i][0], self.willfall[i][1]];
-                    del self.willfall[i];
+            mi := 0;
+            while(mi < len(self.willfall)) {
+                if(getTicks() > self.willfall[mi][2]) {
+                    self.falling[len(self.falling)] := [self.willfall[mi][0], self.willfall[mi][1]];
+                    del self.willfall[mi];
                 } else {
-                    i := i + 1;
+                    mi := mi + 1;
                 }
             }
 
-            i := 0;
-            while(i < len(self.falling)) {
-                bx := self.falling[i][0];
-                by := self.falling[i][1];
+            mi := 0;
+            while(mi < len(self.falling)) {
+                willDelete := false;
+                bx := self.falling[mi][0];
+                by := self.falling[mi][1];                
+                blocked := self.blocks[bx][by + 1].block != EMPTY;
 
-                if(self.blocks[bx][by].dy = 0 && self.blocks[bx][by + 1].block != EMPTY) {
-                    del self.falling[i];
+                if(blocked) {
+                    right := (
+                        self.blocks[bx + 1][by    ].block = EMPTY && 
+                        self.blocks[bx + 1][by + 1].block = EMPTY && 
+                        self.blocks[bx + 1][by - 1].block = EMPTY
+                    );
+                    left := (
+                        self.blocks[bx - 1][by    ].block = EMPTY && 
+                        self.blocks[bx - 1][by + 1].block = EMPTY && 
+                        self.blocks[bx - 1][by - 1].block = EMPTY
+                    );
+                    if(left && right) {
+                        if(random() * 2 <= 1) {
+                            left := false;
+                        } else {
+                            right := false;
+                        }
+                    }
+                    if(left || right) {
+                        dx := 1;
+                        if(left) {
+                            dx := -1;
+                        }
+                        if(self.moveBlock(bx, by, dx, 0, 0, mi)) {
+                            willDelete := true;
+                        }
+                    } else {
+                        willDelete := true;
+                    }
                 } else {
                     # move rock
                     self.blocks[bx][by].dy := self.blocks[bx][by].dy + 1;
 
                     # transfer to next block
-                    if(self.blocks[bx][by].dy >= BLOCK_H/2) {
-                        if(self.blocks[bx][by - 1].block = ROCK || self.blocks[bx][by - 1].block = GEM) {
-                            self.startFalling(bx, by - 1);
+                    if(self.blocks[bx][by].dy >= BLOCK_H) {
+                        self.startFallingAbove(bx, by);
+                        if(self.moveBlock(bx, by, 0, 1, 0, mi)) {
+                            willDelete := true;
                         }
-                        self.blocks[bx][by + 1] := {
-                            "block": self.blocks[bx][by].block,
-                            "dy": BLOCK_H / -2
-                        };
-                        self.blocks[bx][by] := {
-                            "block": EMPTY,
-                            "dy": 0
-                        };
-                        self.falling[i][1] := by + 1;
                     }
-
-                    i := i + 1;
                 }
-            }            
+
+                if(willDelete) {
+                    del self.falling[mi];
+                } else {
+                    mi := mi + 1;
+                }
+            }
+
             ret := true;
             self.timer := getTicks() + ROCK_FALL_SPEED;
         }
