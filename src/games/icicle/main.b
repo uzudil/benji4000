@@ -106,6 +106,7 @@ player := {
                     room.takeGem();
                     room.removeFalling(bx, by);
                 }
+                room.checkPlayerDeath(bx, by - 1);
                 room.blocks[bx][by].block := EMPTY;
                 if(room.blocks[bx][by - 1].block = ROCK || room.blocks[bx][by - 1].block = GEM) {
                     room.startFalling(bx, by - 1);
@@ -129,6 +130,7 @@ room := {
     "timer": 0,
     "fade": 0,
     "fadeDir": 0,
+    "death": false,
     "init": self => {
         r := ROOMS[self.roomIndex];
         self.fadeDir := 1;
@@ -140,6 +142,7 @@ room := {
         HEIGHT := len(r);
         self.blocks := [];
         self.gems := 0;
+        player.lives := 3;
         x := 0;
         while(x < WIDTH) {
             self.blocks[x] := [];
@@ -179,6 +182,17 @@ room := {
             row := row + 1;
         }
     },
+    "checkPlayerDeath": (self, bx, by) => {
+        px := int(player.x/BLOCK_W+0.5);
+        py := int(player.y/BLOCK_H+0.5);
+        if(self.blocks[bx][by].block = ROCK && px = bx && (py = by || (py = by + 1 && self.blocks[bx][by].dy >= BLOCK_H/2))) {
+            player.lives := player.lives - 1;
+            self.fadeDir := -1;
+            self.fade := FADE_STEPS;
+            self.timer := 0;
+            self.death := true;
+        }
+    },
     "draw": self => {
         if(self.fadeDir != 0) {
             if(getTicks() < self.timer) {
@@ -195,7 +209,11 @@ room := {
                 player.draw();
             }
             if(self.fadeDir = -1 && self.fade <= 0) {
-                self.roomIndex := self.roomIndex + 1;
+                if(self.death) {
+                    self.death := false;
+                } else {
+                    self.roomIndex := self.roomIndex + 1;
+                }
                 player.clear();
                 if(self.roomIndex < len(ROOMS)) {
                     self.init();
@@ -393,6 +411,8 @@ room := {
                     }
                 }
 
+                self.checkPlayerDeath(bx, by);
+
                 if(willDelete) {
                     del self.falling[mi];
                 } else {
@@ -424,7 +444,7 @@ def main() {
     room.init();
     room.draw();
 
-    while(room.roomIndex < len(ROOMS)) {
+    while(room.roomIndex < len(ROOMS) && player.lives > 0) {
         if(room.fadeDir = 0) {
             a := player.move();
             b := room.moveRocks();
