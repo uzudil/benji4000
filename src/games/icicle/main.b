@@ -131,7 +131,10 @@ room := {
     "fade": 0,
     "fadeDir": 0,
     "death": false,
+    "sx": 0,
+    "sy": 0,
     "init": self => {
+        clearMonsters();
         r := ROOMS[self.roomIndex];
         self.fadeDir := 1;
         self.fade := 0;
@@ -172,6 +175,10 @@ room := {
                 if(c = "p") {
                     player.x := x * BLOCK_W;
                     player.y := row * BLOCK_H;
+                }
+                if(c = "b") {
+                    addMonster(c, x * BLOCK_W + BLOCK_W/2, row * BLOCK_H + BLOCK_H/2);
+                    b := EMPTY;
                 }
                 self.blocks[x][row] := {
                     "block": b,
@@ -221,20 +228,20 @@ room := {
             }
         }
 
-        sx := (player.x - SCREEN_W/2)/BLOCK_W;
-        ex := sx + SCREEN_W/BLOCK_W + 1;
-        sy := (player.y-SCREEN_H/2)/BLOCK_H;
-        ey := sy + SCREEN_H/BLOCK_H + 1;
+        self.sx := (player.x - SCREEN_W/2)/BLOCK_W;
+        ex := self.sx + SCREEN_W/BLOCK_W + 1;
+        self.sy := (player.y-SCREEN_H/2)/BLOCK_H;
+        ey := self.sy + SCREEN_H/BLOCK_H + 1;
         clearVideo();
         dx := player.x % BLOCK_W;
         dy := player.y % BLOCK_H;
         x := 0;
-        while(x < ex - sx) {
-            bx := sx + x;
+        while(x < ex - self.sx) {
+            bx := self.sx + x;
             if(bx >= 0 && bx < WIDTH) {
                 y := 0;
-                while(y < ey - sy) {
-                    by := sy + y;
+                while(y < ey - self.sy) {
+                    by := self.sy + y;
                     if(by >= 0 && by < HEIGHT) {
                         block := self.blocks[bx][by];
                         if(block.block >= 0 && block.block < len(IMG)) {
@@ -448,7 +455,8 @@ def main() {
         if(room.fadeDir = 0) {
             a := player.move();
             b := room.moveRocks();
-            if(a || b) {
+            c := drawMonsters(room.sx, room.sy);
+            if(a || b || c) {
                 room.draw();
             }
         } else {
