@@ -1,6 +1,6 @@
 # benji4000
 The "other" lost personal computer of the 80s. 
-It was similar to the better known C64 but programmed in a higher-level (and much more imaginary) language.
+It was similar to the better known C64 but programmed in a higher-level (and much more imaginary) [language](https://github.com/uzudil/benji4000/wiki/LanguageFeatures).
 
 <img src="screenshots/jumper.gif" width=320> <img src="screenshots/extmode.png" width=320> <img src="screenshots/icicle.gif" width=320>
 
