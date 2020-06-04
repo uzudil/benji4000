@@ -363,11 +363,21 @@ room := {
         ret := false;
         if(getTicks() > self.timer && (len(self.falling) > 0 || len(self.willfall) > 0)) {
 
+            px := int(player.x/BLOCK_W+0.5);
+            py := int(player.y/BLOCK_H+0.5);
+
             mi := 0;
             while(mi < len(self.willfall)) {
                 if(getTicks() > self.willfall[mi][2]) {
-                    self.falling[len(self.falling)] := [self.willfall[mi][0], self.willfall[mi][1]];
-                    del self.willfall[mi];
+                    bx := self.willfall[mi][0];
+                    by := self.willfall[mi][1];
+                    if(px = bx && py - 1 = by) {
+                        # player still under block
+                        self.willfall[mi][2] := getTicks() + 0.25;
+                    } else {
+                        self.falling[len(self.falling)] := [self.willfall[mi][0], self.willfall[mi][1]];
+                        del self.willfall[mi];
+                    }
                 } else {
                     mi := mi + 1;
                 }
@@ -384,12 +394,16 @@ room := {
                     right := (
                         self.blocks[bx + 1][by    ].block = EMPTY && 
                         self.blocks[bx + 1][by + 1].block = EMPTY && 
-                        self.blocks[bx + 1][by - 1].block = EMPTY
+                        self.blocks[bx + 1][by - 1].block = EMPTY &&
+                        (bx + 1 != px || by != py) &&
+                        (bx + 1 != px || by + 1 != py)
                     );
                     left := (
                         self.blocks[bx - 1][by    ].block = EMPTY && 
                         self.blocks[bx - 1][by + 1].block = EMPTY && 
-                        self.blocks[bx - 1][by - 1].block = EMPTY
+                        self.blocks[bx - 1][by - 1].block = EMPTY &&
+                        (bx - 1 != px || by != py) &&
+                        (bx - 1 != px || by + 1 != py)
                     );
                     if(left && right) {
                         if(random() * 2 <= 1) {
