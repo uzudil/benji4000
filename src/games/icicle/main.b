@@ -15,12 +15,13 @@ const IMG = [ "ice", "rock", "brick", "gem" ];
 const ROCK_FALL_SPEED = 0.015;
 const DEBUG = false;
 const FADE_STEPS = 10;
+const MAX_LIVES = 5;
 
 WIDTH := 0;
 HEIGHT := 0;
 
 player := {
-    "lives": 3,
+    "lives": MAX_LIVES,
     "score": 0,
     "x": 0,
     "y": 0,
@@ -145,7 +146,6 @@ room := {
         HEIGHT := len(r);
         self.blocks := [];
         self.gems := 0;
-        player.lives := 3;
         x := 0;
         while(x < WIDTH) {
             self.blocks[x] := [];
@@ -202,7 +202,7 @@ room := {
         self.fade := FADE_STEPS;
         self.timer := 0;
         self.death := true;
-        clearMonsters();
+        #clearMonsters();
     },
     "draw": self => {
         if(self.fadeDir != 0) {
@@ -224,6 +224,7 @@ room := {
                     self.death := false;
                 } else {
                     self.roomIndex := self.roomIndex + 1;
+                    player.lives := MAX_LIVES;
                 }
                 player.clear();
                 if(self.roomIndex < len(ROOMS)) {
@@ -263,9 +264,13 @@ room := {
         fillRect(0, SCREEN_H, 160, 200, COLOR_BLACK);
         deltaX := player.x % BLOCK_W;
         deltaY := player.y % BLOCK_H;
-        drawText(120, SCREEN_H, COLOR_WHITE, COLOR_BLACK, "Life" + player.lives);
-        drawText(60, SCREEN_H, COLOR_WHITE, COLOR_BLACK, "Room" + (self.roomIndex + 1));
-        drawText(0, SCREEN_H, COLOR_WHITE, COLOR_BLACK, "Gems" + self.gems);
+        if(intro.intro != INTRO_DONE) {
+            drawText(0, SCREEN_H, COLOR_YELLOW, COLOR_BLACK, "Press a key to start");
+        } else {
+            drawText(120, SCREEN_H, COLOR_WHITE, COLOR_BLACK, "Life" + player.lives);
+            drawText(60, SCREEN_H, COLOR_WHITE, COLOR_BLACK, "Room" + (self.roomIndex + 1));
+            drawText(0, SCREEN_H, COLOR_WHITE, COLOR_BLACK, "Gems" + self.gems);
+        }
 
         # fade overlay
         if(self.fadeDir != 0) {
@@ -453,6 +458,44 @@ room := {
 };
 img := null;
 
+const INTRO_SPRITE = 7;
+const INTRO_INIT = 0;
+const INTRO_DONE = 1;
+intro := {
+    "intro": INTRO_INIT,
+    "intro_x": 40,
+    "intro_y": 20,
+    "intro_timer": 0,
+    "intro_dir": 1,
+    "intro_diry": 1,
+    "draw": self => {
+        setSprite(INTRO_SPRITE, [img["title"]]);
+        while(anyKeyDown() = false) {
+            if(getTicks() > self.intro_timer) {
+                drawSprite(self.intro_x, self.intro_y, INTRO_SPRITE, 0, 0, 0);
+                self.intro_x := self.intro_x + self.intro_dir;
+                self.intro_y := self.intro_y + self.intro_diry;
+                if(self.intro_x >= 120) {
+                    self.intro_dir := -1;
+                }
+                if(self.intro_x < 40) {
+                    self.intro_dir := 1;
+                }
+                if(self.intro_y >= 180) {
+                    self.intro_diry := -1;
+                }
+                if(self.intro_y < 20) {
+                    self.intro_diry := 1;
+                }            
+                self.intro_timer := getTicks() + 0.01;
+            }
+        }
+        self.intro := INTRO_DONE;
+        delSprite(INTRO_SPRITE);
+    },
+};
+
+
 def main() {
     setVideoMode(2);
 
@@ -468,6 +511,7 @@ def main() {
 
     room.init();
     room.draw();
+    intro.draw();
 
     while(room.roomIndex < len(ROOMS) && player.lives > 0) {
         if(room.fadeDir = 0) {
