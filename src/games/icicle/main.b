@@ -122,7 +122,7 @@ player := {
 };
 
 room := {
-    "roomIndex": 1,
+    "roomIndex": 0,
     "gems": 0,
     "blocks": [],
     "willfall": [],
