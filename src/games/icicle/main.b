@@ -122,7 +122,7 @@ player := {
 };
 
 room := {
-    "roomIndex": 0,
+    "roomIndex": 1,
     "gems": 0,
     "blocks": [],
     "willfall": [],
@@ -193,12 +193,16 @@ room := {
         px := int(player.x/BLOCK_W+0.5);
         py := int(player.y/BLOCK_H+0.5);
         if(self.blocks[bx][by].block = ROCK && px = bx && (py = by || (py = by + 1 && self.blocks[bx][by].dy >= BLOCK_H/2))) {
-            player.lives := player.lives - 1;
-            self.fadeDir := -1;
-            self.fade := FADE_STEPS;
-            self.timer := 0;
-            self.death := true;
+            self.playerDeath();
         }
+    },
+    "playerDeath": self => {
+        player.lives := player.lives - 1;
+        self.fadeDir := -1;
+        self.fade := FADE_STEPS;
+        self.timer := 0;
+        self.death := true;
+        clearMonsters();
     },
     "draw": self => {
         if(self.fadeDir != 0) {

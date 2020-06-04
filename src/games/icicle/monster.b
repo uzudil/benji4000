@@ -45,6 +45,7 @@ def clearMonsters() {
     i := 0;
     while(i < len(monsters)) {
         m := monsters[i];
+        drawSprite(-1000, -1000, monsters[i].sprite, 0, 0, 0);
         delSprite(monsters[i].sprite);
         i := i + 1;
     }
@@ -93,14 +94,33 @@ def moveMonster(m, sx, sy) {
         if(new_dir != null) {
             m.dir := new_dir;
             dx := DIRS[m.dir][0];
+            dy := DIRS[m.dir][1];
             if(dx = 1) {
                 m.flipX := 1;
             } else {
                 m.flipX := 0;
             }
             m.x := m.x + dx;
-            m.y := m.y + DIRS[m.dir][1];
+            m.y := m.y + dy;
+            if(dy != 0) {
+                m.x := int(m.x / BLOCK_W) * BLOCK_W + BLOCK_W/2;
+            } else {
+                m.y := int(m.y / BLOCK_H) * BLOCK_H + BLOCK_H/2;
+            }
             drawSprite(m.x - sx * BLOCK_W, m.y - sy * BLOCK_H, m.sprite, m.imgIndex, m.flipX, m.flipY);
+
+            # kill player
+            if(checkSpriteCollision(player.sprite, m.sprite)) {
+                room.playerDeath();
+            }
+
+            # kill monster
+            bx := int(m.x / BLOCK_W);
+            by := int(m.y / BLOCK_H);
+            if(room.blocks[bx][by].block = ROCK) {
+                room.blocks[bx][by].block := GEM;
+                return true;
+            }
         }
         
         m.imgIndex := m.imgIndex + md.animSpeed;
@@ -109,6 +129,7 @@ def moveMonster(m, sx, sy) {
         }
         m.timer := getTicks() + md.speed;
     }
+    return false;
 }
 
 def drawMonsters(sx, sy) {
@@ -116,8 +137,13 @@ def drawMonsters(sx, sy) {
     i := 0;
     while(i < len(monsters)) {
         m := monsters[i];
-        moveMonster(m, sx, sy);
-        i := i + 1;
+        if(moveMonster(m, sx, sy)) {
+            drawSprite(-1000, -1000, monsters[i].sprite, 0, 0, 0);
+            delSprite(monsters[i].sprite);
+            del monsters[i];
+        } else {
+            i := i + 1;
+        }
     }
     return ret;
 }
