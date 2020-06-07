@@ -12,6 +12,7 @@ import (
 	"github.com/alecthomas/participle/lexer"
 	"github.com/alecthomas/repr"
 	"github.com/uzudil/benji4000/gfx"
+	"github.com/uzudil/benji4000/sound"
 )
 
 var ANON_COUNT uint32
@@ -67,6 +68,8 @@ type Context struct {
 	Program *Program
 	// the video card
 	Video *gfx.Gfx
+	// the sound card
+	Sound *sound.Sound
 	// The sandbox directory
 	Sandbox *string
 }
@@ -750,6 +753,7 @@ func CreateContext(program *Program) *Context {
 		Pos:          lexer.Position{},
 		Program:      program,
 		Video:        nil,
+		Sound:        nil,
 	}
 }
 
@@ -815,7 +819,7 @@ func Load(source string, showAst *bool, ctx *Context) (interface{}, error) {
 	return ast.init(ctx, source)
 }
 
-func Run(source string, showAst *bool, ctx *Context, video *gfx.Gfx) (interface{}, error) {
+func Run(source string, showAst *bool, ctx *Context, video *gfx.Gfx, sound *sound.Sound) (interface{}, error) {
 	// run it
 	ast, err := load(source, showAst)
 	if err != nil {
@@ -827,6 +831,7 @@ func Run(source string, showAst *bool, ctx *Context, video *gfx.Gfx) (interface{
 		return nil, err
 	}
 	ctx.Video = video
+	ctx.Sound = sound
 
 	return ast.Evaluate(ctx)
 }

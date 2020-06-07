@@ -669,6 +669,42 @@ func checkBoundingBoxes(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return float64(index), err
 }
 
+func makeSample(ctx *Context, arg ...interface{}) (interface{}, error) {
+	a, ok := arg[0].(*[]interface{})
+	if !ok {
+		return nil, fmt.Errorf("First argument should be an array")
+	}
+	if len(*a)%2 != 0 {
+		return nil, fmt.Errorf("The array should contain frequency + duration pairs. Eg.: 440, 0.1, 550, 0.2, etc")
+	}
+	freqs := make([]float64, len(*a)/2)
+	durations := make([]float64, len(*a)/2)
+	for i, v := range *a {
+		if i%2 == 0 {
+			freqs[i/2] = v.(float64)
+		} else {
+			durations[i/2] = v.(float64)
+		}
+	}
+	sample, err := ctx.Sound.MakeSample(freqs, durations)
+	if err != nil {
+		return nil, err
+	}
+	return float64(sample), nil
+}
+
+func playSample(ctx *Context, arg ...interface{}) (interface{}, error) {
+	f1, ok := arg[0].(float64)
+	if !ok {
+		return nil, fmt.Errorf("First argument should be the channel")
+	}
+	f2, ok := arg[1].(float64)
+	if !ok {
+		return nil, fmt.Errorf("Second argument should be the sample")
+	}
+	return nil, ctx.Sound.PlaySample(int(f1), uint32(f2))
+}
+
 func assert(ctx *Context, arg ...interface{}) (interface{}, error) {
 	a := arg[0]
 	b := arg[1]
@@ -784,6 +820,8 @@ func Builtins() map[string]Builtin {
 		"checkBoundingBoxes":   checkBoundingBoxes,
 		"checkSpriteCollision": checkSpriteCollision,
 		"delSprite":            delSprite,
+		"makeSample":           makeSample,
+		"playSample":           playSample,
 	}
 }
 

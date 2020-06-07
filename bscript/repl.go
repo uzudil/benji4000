@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/uzudil/benji4000/gfx"
+	"github.com/uzudil/benji4000/sound"
 )
 
 const syntaxError = "?Syntax error"
@@ -23,7 +24,7 @@ func processCommand(ctx *Context, cmds string) (bool, error) {
 	case cmd[0] == "run":
 		var err error
 		if len(cmd) > 1 {
-			_, err = Run(cmd[1], nil, ctx, ctx.Video)
+			_, err = Run(cmd[1], nil, ctx, ctx.Video, ctx.Sound)
 		} else if ctx.Program != nil {
 			_, err = ctx.Program.Evaluate(ctx)
 		} else {
@@ -47,9 +48,10 @@ func processCommand(ctx *Context, cmds string) (bool, error) {
 }
 
 // Repl is an interactive command interpreter
-func Repl(video *gfx.Gfx) {
+func Repl(video *gfx.Gfx, sound *sound.Sound) {
 	ctx := CreateContext(nil)
 	ctx.Video = video
+	ctx.Sound = sound
 
 	ctx.Builtins["print"](ctx, "     **** Benji4000 bscript v1 ****")
 	ctx.Builtins["print"](ctx, "")

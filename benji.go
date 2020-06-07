@@ -7,10 +7,11 @@ import (
 
 	"github.com/uzudil/benji4000/bscript"
 	"github.com/uzudil/benji4000/gfx"
+	"github.com/uzudil/benji4000/sound"
 )
 
-func repl(video *gfx.Gfx) {
-	bscript.Repl(video)
+func repl(video *gfx.Gfx, sound *sound.Sound) {
+	bscript.Repl(video, sound)
 }
 
 func main() {
@@ -27,17 +28,18 @@ func main() {
 	flag.Parse()
 
 	video := gfx.NewGfx(scale, *fullscreen)
+	sound := sound.NewSound()
 
 	if source != "" {
 		go func() {
-			_, err := bscript.Run(source, showAst, nil, video)
+			_, err := bscript.Run(source, showAst, nil, video, sound)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 			}
 			os.Exit(0)
 		}()
 	} else {
-		go repl(video)
+		go repl(video, sound)
 	}
 
 	video.Render.MainLoop()
