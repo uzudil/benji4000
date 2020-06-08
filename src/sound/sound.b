@@ -1,24 +1,26 @@
-def main() {
-    sample1 := makeSample([
-        440, 0.1,
-        550, 0.1,
-        440, 0.1,
-        550, 0.1,
-        440, 0.1,
-        440, 0.1,
-        440, 0.5,
-    ]);
-    sample2 := makeSample([
-        200, 0.25,
-        100, 0.25,
-        200, 0.25,
-        100, 0.25,
-        100, 0.5,
-        100, 0.5,
-    ]);
+const freqC = 523.3;
+const freqE = 659.3;
+const freqG = 784.0;
 
-    playSample(0, sample1);
-    playSample(1, sample2);
+def main() {
+
+        
+
+    playSound(0, freqC, 0.2);
+    playSound(0, freqE, 0.2);
+    playSound(0, freqC, 0.2);
+    playSound(0, freqE, 0.2);
+    playSound(0, freqC, 0.3);
+    playSound(0, freqC, 0.3);
+    playSound(0, freqC, 0.3);
+
+
+    playSound(1, freqG, 0.5);    
+    playSound(1, freqE, 0.5);    
+    playSound(1, freqG, 0.5);    
+    playSound(1, freqE, 0.5);    
+    playSound(1, freqG, 0.5);    
+    playSound(1, freqE, 0.5);    
 
     while(anyKeyDown() = false) {
     }
