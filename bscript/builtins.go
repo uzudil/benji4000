@@ -669,6 +669,14 @@ func checkBoundingBoxes(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return float64(index), err
 }
 
+func clearSound(ctx *Context, arg ...interface{}) (interface{}, error) {
+	playerIndex, ok := arg[0].(float64)
+	if !ok {
+		return nil, fmt.Errorf("First argument should be the player index")
+	}
+	return nil, ctx.Sound.Clear(int(playerIndex))
+}
+
 func playSound(ctx *Context, arg ...interface{}) (interface{}, error) {
 	playerIndex, ok := arg[0].(float64)
 	if !ok {
@@ -801,6 +809,7 @@ func Builtins() map[string]Builtin {
 		"checkSpriteCollision": checkSpriteCollision,
 		"delSprite":            delSprite,
 		"playSound":            playSound,
+		"clearSound":           clearSound,
 	}
 }
 

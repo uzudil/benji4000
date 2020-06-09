@@ -2,6 +2,7 @@ package sound
 
 import (
 	"math"
+	"sync"
 	"time"
 
 	"github.com/faiface/beep"
@@ -16,14 +17,6 @@ const (
 	bufferSize      = 1024
 )
 
-type SineWave struct {
-	freq   float64
-	length int64
-	pos    int64
-
-	remaining []byte
-}
-
 type Render struct {
 	Channels []*AudioChannel
 }
@@ -34,9 +27,11 @@ type AudioChannel struct {
 	index    int
 	pos      int64
 	err      error
+	Lock     sync.Mutex
 }
 
 func (audio *AudioChannel) Stream(samples [][2]float64) (n int, ok bool) {
+	audio.Lock.Lock()
 	for sampleIndex := 0; sampleIndex < len(samples); sampleIndex++ {
 		if audio.index >= len(audio.freq) {
 			samples[sampleIndex][0] = 0
@@ -53,7 +48,7 @@ func (audio *AudioChannel) Stream(samples [][2]float64) (n int, ok bool) {
 			}
 		}
 	}
-
+	audio.Lock.Unlock()
 	return len(samples), true
 }
 
@@ -66,7 +61,9 @@ func NewRender() (*Render, error) {
 	speaker.Init(sr, sr.N(time.Second/10))
 	channels := make([]*AudioChannel, playerCount)
 	for i := 0; i < len(channels); i++ {
-		channels[i] = &AudioChannel{}
+		channels[i] = &AudioChannel{
+			Lock: sync.Mutex{},
+		}
 		speaker.Play(channels[i])
 	}
 	return &Render{
@@ -74,9 +71,30 @@ func NewRender() (*Render, error) {
 	}, nil
 }
 
+func (render *Render) Clear(playerIndex int) error {
+	audio := render.Channels[playerIndex]
+	audio.Lock.Lock()
+	audio.freq = []float64{}
+	audio.duration = []int64{}
+	audio.Lock.Unlock()
+	return nil
+}
+
 func (render *Render) Play(playerIndex int, freq float64, duration time.Duration) error {
 	audio := render.Channels[playerIndex]
+	audio.Lock.Lock()
+
+	// clear out finished notes
+	if audio.index > 0 {
+		audio.freq = audio.freq[audio.index:]
+		audio.duration = audio.duration[audio.index:]
+		audio.index = 0
+	}
+
+	// add new notes
 	audio.freq = append(audio.freq, freq)
 	audio.duration = append(audio.duration, int64(duration*sampleRate)/int64(time.Second))
+
+	audio.Lock.Unlock()
 	return nil
 }

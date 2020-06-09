@@ -103,6 +103,9 @@ player := {
             if(self.moveY != 0 || self.moveX != 0) {
                 bx := int(self.x/BLOCK_W+0.5);
                 by := int(self.y/BLOCK_H+0.5);
+                if(deltaX = 0 && deltaY = 0) {
+                    playSound(0, 100, 0.05);
+                }
                 if(room.blocks[bx][by].block = GEM) {
                     room.takeGem();
                     room.removeFalling(bx, by);
@@ -296,6 +299,8 @@ room := {
     },
     "takeGem": self => {
         self.gems := self.gems - 1;
+        playSound(0, 1500, 0.02);
+        playSound(0, 1800, 0.03);
         if(self.gems <= 0) {
             self.fadeDir := -1;
             self.fade := FADE_STEPS;
@@ -382,6 +387,7 @@ room := {
                     } else {
                         self.falling[len(self.falling)] := [self.willfall[mi][0], self.willfall[mi][1]];
                         del self.willfall[mi];
+                        playRockSound();
                     }
                 } else {
                     mi := mi + 1;
@@ -434,6 +440,7 @@ room := {
 
                     # transfer to next block
                     if(self.blocks[bx][by].dy >= BLOCK_H) {
+                        playRockSound();
                         self.startFallingAbove(bx, by);
                         if(self.moveBlock(bx, by, 0, 1, 0, mi)) {
                             willDelete := true;
@@ -495,6 +502,9 @@ intro := {
     },
 };
 
+def playRockSound() {
+    playSound(1, 150 + random() * 30, 0.015);
+}
 
 def main() {
     setVideoMode(2);

@@ -19,6 +19,10 @@ func NewSound() *Sound {
 	}
 }
 
+func (sound *Sound) Clear(playerIndex int) error {
+	return sound.Render.Clear(playerIndex)
+}
+
 func (sound *Sound) Play(playerIndex int, freq, duration float64) error {
 	// todo: send this via a channel?
 	return sound.Render.Play(playerIndex, freq, time.Duration(1000.0*duration)*time.Millisecond)
