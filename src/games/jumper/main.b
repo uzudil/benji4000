@@ -15,6 +15,7 @@ player := {
     "sprite": 0,
     "x": 80,
     "y": 88,
+    "lastY": 0,
     "imgIndex": 0,
     "timer": 0,
     "speed": SPEED_SLOW,
@@ -80,7 +81,29 @@ def movePlayer(dir) {
         player.y := py;
         return false;
     }
+    if(player.y - player.lastY > 10) {
+        player.lastY := player.y;
+        playSound(0, 900 - player.y * 3, 0.1);
+    }
+    if(player.lastY > player.y) {
+        player.lastY := player.y;
+    }
     return true;
+}
+
+def victorySound() {
+    playSound(1, 0, 0.25);
+    playSound(1, 750, 0.5);
+    playSound(1, 700, 0.25);
+    playSound(1, 800, 0.25);
+    playSound(1, 0, 0.25);
+    playSound(1, 800, 0.5);
+}
+
+def keySound() {
+    playSound(1, 900, 0.25);
+    playSound(1, 950, 0.25);
+    playSound(1, 1000, 0.5);
 }
 
 def pickupKeys() {
@@ -89,9 +112,11 @@ def pickupKeys() {
             player.x + PLAYER_WIDTH/2, 
             player.y + PLAYER_HEIGHT/2)) {
         player.keys := player.keys + 1;
+        keySound();
         drawUI();
         if(player.keys >= 3) {
             openGate();
+            victorySound();
         }
     }
 }
@@ -127,6 +152,19 @@ def drawUI() {
     drawText(0, 190, COLOR_WHITE, COLOR_BLACK, "Lives:" + player.lives);
     drawText(110, 190, COLOR_WHITE, COLOR_BLACK, "Keys:" + player.keys);
     updateVideo();
+}
+
+def playJumpSound() {
+    fr := 300;
+    while(fr < 900) {
+        playSound(0, fr, 0.1);
+        fr := fr + 100;
+    }
+}
+
+def playMoveSound() {
+    playSound(0, 100, 0.01);
+    playSound(0, 0, 0.01);
 }
 
 def gameMode() {
@@ -171,9 +209,13 @@ def gameMode() {
             }
             if(isKeyDown(KeySpace) && player.jump = 0 && falling = false) {
                 player.jump := getTicks() + JUMP_AIR_TIME;
+                playJumpSound();
             }
             if(move) {
                 animatePlayer();
+                if(player.jump = 0 && falling = false) {
+                    playMoveSound();
+                }
             } else {
                 player.speed := SPEED_SLOW;
                 player.sinceMove := 0;

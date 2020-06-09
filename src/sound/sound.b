@@ -6,15 +6,15 @@ def main() {
     i := 0;
     while(i < 100) {
         if(i % 2 = 0) {
-            playSound(0, 50, 0.5);
+            playSound(0, 120, 0.5);
         } else {
-            playSound(0, 70, 0.5);
+            playSound(0, 150, 0.5);
         }
         i := i + 1;
     }
     playSound(1, 0, 2);
-    f := 200;
-    while(f < 440) {
+    f := 400;
+    while(f < 1000) {
         playSound(1, f, 0.1);
         f := f + 10;
     }
