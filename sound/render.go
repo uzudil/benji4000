@@ -28,12 +28,17 @@ type AudioChannel struct {
 	pos      int64
 	err      error
 	Lock     sync.Mutex
+	Paused   bool
+	Loop     bool
 }
 
 func (audio *AudioChannel) Stream(samples [][2]float64) (n int, ok bool) {
 	audio.Lock.Lock()
 	for sampleIndex := 0; sampleIndex < len(samples); sampleIndex++ {
-		if audio.index >= len(audio.freq) {
+		if audio.Loop && audio.index >= len(audio.freq) {
+			audio.index = 0
+		}
+		if audio.Paused || audio.index >= len(audio.freq) {
 			samples[sampleIndex][0] = 0
 			samples[sampleIndex][1] = 0
 		} else {
@@ -80,14 +85,35 @@ func (render *Render) Clear(playerIndex int) error {
 	return nil
 }
 
+func (render *Render) Pause(playerIndex int, enabled bool) error {
+	audio := render.Channels[playerIndex]
+	audio.Lock.Lock()
+	audio.Paused = enabled
+	audio.Lock.Unlock()
+	return nil
+}
+
+func (render *Render) Loop(playerIndex int, enabled bool) error {
+	audio := render.Channels[playerIndex]
+	audio.Lock.Lock()
+	audio.Loop = enabled
+	audio.Lock.Unlock()
+	return nil
+}
+
 func (render *Render) Play(playerIndex int, freq float64, duration time.Duration) error {
 	audio := render.Channels[playerIndex]
 	audio.Lock.Lock()
 
 	// clear out finished notes
 	if audio.index > 0 {
-		audio.freq = audio.freq[audio.index:]
-		audio.duration = audio.duration[audio.index:]
+		if audio.index < len(audio.freq) {
+			audio.freq = audio.freq[audio.index:]
+			audio.duration = audio.duration[audio.index:]
+		} else {
+			audio.freq = []float64{}
+			audio.duration = []int64{}
+		}
 		audio.index = 0
 	}
 

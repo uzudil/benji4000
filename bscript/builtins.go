@@ -677,6 +677,30 @@ func clearSound(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, ctx.Sound.Clear(int(playerIndex))
 }
 
+func pauseSound(ctx *Context, arg ...interface{}) (interface{}, error) {
+	playerIndex, ok := arg[0].(float64)
+	if !ok {
+		return nil, fmt.Errorf("First argument should be the player index")
+	}
+	enabled, ok := arg[1].(bool)
+	if !ok {
+		return nil, fmt.Errorf("Second argument should be a boolean")
+	}
+	return nil, ctx.Sound.Pause(int(playerIndex), enabled)
+}
+
+func loopSound(ctx *Context, arg ...interface{}) (interface{}, error) {
+	playerIndex, ok := arg[0].(float64)
+	if !ok {
+		return nil, fmt.Errorf("First argument should be the player index")
+	}
+	enabled, ok := arg[1].(bool)
+	if !ok {
+		return nil, fmt.Errorf("Second argument should be a boolean")
+	}
+	return nil, ctx.Sound.Loop(int(playerIndex), enabled)
+}
+
 func playSound(ctx *Context, arg ...interface{}) (interface{}, error) {
 	playerIndex, ok := arg[0].(float64)
 	if !ok {
@@ -809,6 +833,8 @@ func Builtins() map[string]Builtin {
 		"checkSpriteCollision": checkSpriteCollision,
 		"delSprite":            delSprite,
 		"playSound":            playSound,
+		"pauseSound":           pauseSound,
+		"loopSound":            loopSound,
 		"clearSound":           clearSound,
 	}
 }
