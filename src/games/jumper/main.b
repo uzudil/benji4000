@@ -98,6 +98,13 @@ def victorySound() {
     playSound(1, 800, 0.25);
     playSound(1, 0, 0.25);
     playSound(1, 800, 0.5);
+
+    playSound(2, 0, 0.25);
+    playSound(2, 770, 0.5);
+    playSound(2, 720, 0.25);
+    playSound(2, 820, 0.25);
+    playSound(2, 0, 0.25);
+    playSound(2, 820, 0.5);
 }
 
 def keySound() {
@@ -112,11 +119,12 @@ def pickupKeys() {
             player.x + PLAYER_WIDTH/2, 
             player.y + PLAYER_HEIGHT/2)) {
         player.keys := player.keys + 1;
-        keySound();
         drawUI();
         if(player.keys >= 3) {
             openGate();
             victorySound();
+        } else {
+            keySound();
         }
     }
 }

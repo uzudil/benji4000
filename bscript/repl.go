@@ -53,6 +53,7 @@ func Repl(video *gfx.Gfx, sound *sound.Sound) {
 	ctx.Video = video
 	ctx.Sound = sound
 
+	ctx.Builtins["print"](ctx, "")
 	ctx.Builtins["print"](ctx, "     **** Benji4000 bscript v1 ****")
 	ctx.Builtins["print"](ctx, "")
 	for true {

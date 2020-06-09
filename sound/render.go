@@ -12,7 +12,7 @@ const (
 	sampleRate      = 44100
 	channelNum      = 2
 	bitDepthInBytes = 2
-	playerCount     = 3
+	playerCount     = 4
 	bufferSize      = 1024
 )
 
