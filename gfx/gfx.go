@@ -306,28 +306,26 @@ func (gfx *Gfx) GetPixel(x, y int) uint8 {
 	return 0
 }
 
+func (gfx *Gfx) SetBackgroundColor(c uint8) error {
+	if gfx.VideoMode != GfxTextMode {
+		for idx := range gfx.VideoMemory {
+			if gfx.VideoMemory[idx] == gfx.BackgroundColor {
+				gfx.VideoMemory[idx] = c
+			}
+		}
+	}
+	gfx.BackgroundColor = c
+	return nil
+}
+
 func (gfx *Gfx) SetPixel(x, y int, fg uint8) error {
 	switch {
 	case gfx.VideoMode == GfxTextMode:
 		// do nothing
 	case gfx.VideoMode == GfxHiresMode:
 		if x >= 0 && y >= 0 && x < Width && y < Height {
-			// set the pixel asked for
-			gfx.VideoMemory[y*Width+x] = byte(fg)
-
-			if fg != gfx.BackgroundColor {
-				// set other pixels (if >0) in this 8x8 area
-				bx := (x / 8) * 8
-				by := (y / 8) * 8
-				for xx := 0; xx < 8; xx++ {
-					for yy := 0; yy < 8; yy++ {
-						addr := (by+yy)*Width + (bx + xx)
-						if gfx.VideoMemory[addr] != gfx.BackgroundColor {
-							gfx.VideoMemory[addr] = byte(fg)
-						}
-					}
-				}
-			}
+			// only lower 8 colors
+			gfx.VideoMemory[y*Width+x] = byte(fg & 7)
 		}
 	case gfx.VideoMode == GfxMultiColorMode:
 		if x >= 0 && y >= 0 && x < Width/2 && y < Height {

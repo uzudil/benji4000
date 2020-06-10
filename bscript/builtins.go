@@ -248,7 +248,7 @@ func setBackground(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("First parameter should be a number")
 	}
-	ctx.Video.BackgroundColor = byte(c)
+	ctx.Video.SetBackgroundColor(byte(c))
 	return nil, nil
 }
 
