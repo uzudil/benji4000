@@ -68,6 +68,15 @@ func trace(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, nil
 }
 
+func setFps(ctx *Context, arg ...interface{}) (interface{}, error) {
+	fps, err := floatArgs(ctx, 1, arg)
+	if err != nil {
+		return nil, err
+	}
+	ctx.Video.Render.Fps = fps[0]
+	return nil, nil
+}
+
 func getTicks(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return ctx.Video.Render.GetTicks(), nil
 }
@@ -285,7 +294,19 @@ func drawImage(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("Third argument should be an image")
 	}
-	return nil, ctx.Video.DrawImage(i[0], i[1], img)
+	return nil, ctx.Video.DrawImage(i[0], i[1], img, 0)
+}
+
+func drawImageRot(ctx *Context, arg ...interface{}) (interface{}, error) {
+	i, err := intArgs(ctx, 3, arg)
+	if err != nil {
+		return nil, err
+	}
+	img, ok := arg[3].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Third argument should be an image")
+	}
+	return nil, ctx.Video.DrawImage(i[0], i[1], img, i[2])
 }
 
 func getImageWidth(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -596,6 +617,41 @@ func fixImages(data map[string]interface{}) {
 	}
 }
 
+func fixArrays(data interface{}) {
+
+	mapdata, ok := data.(map[string]interface{})
+	if ok {
+		for k, v := range mapdata {
+			m, ok := v.(map[string]interface{})
+			if ok {
+				fixArrays(m)
+			}
+
+			arr, ok := v.([]interface{})
+			if ok {
+				fixArrays(arr)
+				mapdata[k] = &arr
+			}
+		}
+	}
+
+	arrdata, ok := data.([]interface{})
+	if ok {
+		for i, v := range arrdata {
+			m, ok := v.(map[string]interface{})
+			if ok {
+				fixArrays(m)
+			}
+
+			arr, ok := v.([]interface{})
+			if ok {
+				fixArrays(arr)
+				arrdata[i] = &arr
+			}
+		}
+	}
+}
+
 func loadFile(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if ctx.Sandbox == nil {
 		return nil, fmt.Errorf("Not running in a sandbox")
@@ -617,6 +673,7 @@ func loadFile(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	fixArrays(data)
 	fixImages(data)
 	return data, nil
 }
@@ -816,6 +873,7 @@ func Builtins() map[string]Builtin {
 		"setColor":             setColor,
 		"getImage":             getImage,
 		"drawImage":            drawImage,
+		"drawImageRot":         drawImageRot,
 		"getImageWidth":        getImageWidth,
 		"getImageHeight":       getImageHeight,
 		"setSprite":            setSprite,
@@ -836,6 +894,7 @@ func Builtins() map[string]Builtin {
 		"pauseSound":           pauseSound,
 		"loopSound":            loopSound,
 		"clearSound":           clearSound,
+		"setFps":               setFps,
 	}
 }
 

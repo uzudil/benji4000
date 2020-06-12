@@ -324,8 +324,7 @@ func (gfx *Gfx) SetPixel(x, y int, fg uint8) error {
 		// do nothing
 	case gfx.VideoMode == GfxHiresMode:
 		if x >= 0 && y >= 0 && x < Width && y < Height {
-			// only lower 8 colors
-			gfx.VideoMemory[y*Width+x] = byte(fg & 7)
+			gfx.VideoMemory[y*Width+x] = byte(fg)
 		}
 	case gfx.VideoMode == GfxMultiColorMode:
 		if x >= 0 && y >= 0 && x < Width/2 && y < Height {
@@ -416,19 +415,31 @@ func (gfx *Gfx) GetImage(x, y, x2, y2 int) (map[string]interface{}, error) {
 	return img, nil
 }
 
-func (gfx *Gfx) DrawImage(x, y int, img map[string]interface{}) error {
+func (gfx *Gfx) DrawImage(x, y int, img map[string]interface{}, rot int) error {
 	w := img["width"].(int)
 	h := img["height"].(int)
 	data := img["data"].([]byte)
-	if gfx.VideoMode == GfxHiresMode {
-		for yy := 0; yy < h; yy++ {
-			copy(gfx.VideoMemory[(y+yy)*Width+x:], data[yy*w:(yy+1)*w])
-		}
-	} else if gfx.VideoMode == GfxMultiColorMode {
+	if gfx.VideoMode != GfxTextMode {
 		index := 0
 		for yy := 0; yy < h; yy++ {
 			for xx := 0; xx < w; xx++ {
-				gfx.SetPixel(x+xx, y+yy, data[index])
+				if data[index] != gfx.BackgroundColor {
+					xp := x + xx
+					yp := y + yy
+					if rot == 1 {
+						xp = x + ((h - 1) - yy)
+						yp = y + xx
+					}
+					if rot == 2 {
+						xp = x + ((w - 1) - xx)
+						yp = y + ((h - 1) - yy)
+					}
+					if rot == 3 {
+						xp = x + yy
+						yp = y + ((w - 1) - xx)
+					}
+					gfx.SetPixel(xp, yp, data[index])
+				}
 				index++
 			}
 		}

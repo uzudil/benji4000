@@ -5,6 +5,8 @@ def imgTest() {
     # draw something
     fillRect(10, 10, 50, 50, COLOR_RED);
     fillCircle(50, 50, 30, COLOR_GREEN);
+    drawLine(10, 10, 50, 50, COLOR_PURPLE);
+    drawLine(50, 10, 10, 50, COLOR_YELLOW);
 
     # copy it
     img := getImage(10, 10, 50, 50);
@@ -12,7 +14,8 @@ def imgTest() {
     # draw it somewhere else
     i := 0;
     while(i < 3) {
-        drawImage(i * 50, 100, img);
+        drawImage(i * 50, 80, img);
+        drawImageRot(i * 50, 135, i + 1, img);
         i := i + 1;
     }
         
