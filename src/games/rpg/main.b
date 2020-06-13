@@ -54,6 +54,7 @@ def main() {
 
     img := load("img.dat");
     
+    initBlocks();
     MODES[mode].init();
     MODES[mode].render();
     while(true) {

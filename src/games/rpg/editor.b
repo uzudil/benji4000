@@ -94,10 +94,11 @@ def handleEditorInput() {
         }
     }
     if(isKeyDown(KeySpace) || isKeyDown(KeyLeftShift) || isKeyDown(KeyRightShift)) {
-        setBlock(editor.x, editor.y, editor.blockIndex, 0);
+        setBlock(editor.x, editor.y, randomBlockOfType(blocks[editor.blockIndex].type).index, 0);
         if(editor.blockIndex = GRASS) {
             setTransitions(editor.x, editor.y);
         }
+        connectRoad(editor.x, editor.y, true);
     }
     if(isKeyDown(KeyLeftBracket)) {
         editor.blockIndex := editor.blockIndex - 1;
@@ -116,6 +117,93 @@ def handleEditorInput() {
     }
 }
 
+def isRoad(mx, my) {
+    return substr(blocks[getBlock(mx, my).block].img, 0, 4) = "road";
+}
+
+def connectRoad(mx, my, recurse) {
+    if(isRoad(mx, my)) {
+        n := isRoad(mx, my - 1);
+        s := isRoad(mx, my + 1);
+        e := isRoad(mx + 1, my);
+        w := isRoad(mx - 1, my);
+        if(recurse) {
+            if(n) {
+                connectRoad(mx, my - 1, false);
+            }
+            if(s) {
+                connectRoad(mx, my + 1, false);
+            }
+            if(e) {
+                connectRoad(mx + 1, my, false);
+            }
+            if(w) {
+                connectRoad(mx - 1, my, false);
+            }
+        }
+        if(n && s && e && w) {
+            setBlock(mx, my, getBlockIndexByName("road4"), 0);
+            return 0;
+        }
+        if(n && s && e) {
+            setBlock(mx, my, getBlockIndexByName("road3"), 0);
+            return 0;
+        }
+        if(w && s && e) {
+            setBlock(mx, my, getBlockIndexByName("road3"), 1);
+            return 0;
+        }
+        if(n && s && w) {
+            setBlock(mx, my, getBlockIndexByName("road3"), 2);
+            return 0;
+        }
+        if(n && e && w) {
+            setBlock(mx, my, getBlockIndexByName("road3"), 3);
+            return 0;
+        }
+        if(s && e) {
+            setBlock(mx, my, getBlockIndexByName("road2"), 0);
+            return 0;
+        }
+        if(s && w) {
+            setBlock(mx, my, getBlockIndexByName("road2"), 1);
+            return 0;
+        }
+        if(n && w) {
+            setBlock(mx, my, getBlockIndexByName("road2"), 2);
+            return 0;
+        }
+        if(n && e) {
+            setBlock(mx, my, getBlockIndexByName("road2"), 3);
+            return 0;
+        }
+        if(n && s) {
+            setBlock(mx, my, getBlockIndexByName("road5"), 0);
+            return 0;
+        }
+        if(e && w) {
+            setBlock(mx, my, getBlockIndexByName("road5"), 1);
+            return 0;
+        }
+        if(s) {
+            setBlock(mx, my, getBlockIndexByName("road1"), 0);
+            return 0;
+        }
+        if(w) {
+            setBlock(mx, my, getBlockIndexByName("road1"), 1);
+            return 0;
+        }
+        if(n) {
+            setBlock(mx, my, getBlockIndexByName("road1"), 2);
+            return 0;
+        }
+        if(e) {
+            setBlock(mx, my, getBlockIndexByName("road1"), 3);
+            return 0;
+        }
+    }
+}
+
 def setTransitions(mx, my) {
     dx := -1;
     while(dx <= 1) {
@@ -125,7 +213,7 @@ def setTransitions(mx, my) {
                 if(blocks[getBlock(mx + dx, my + dy).block].isEdge) {
                     setBlock(mx + dx, my + dy, WATER, 0);
                 }
-                applyTransition(mx + dx, my + dy);
+                fixWaterEdge(mx + dx, my + dy);
             }
             dy := dy + 1;            
         }
@@ -133,7 +221,7 @@ def setTransitions(mx, my) {
     }
 }
 
-def applyTransition(mx, my) {
+def fixWaterEdge(mx, my) {
     if(getBlock(mx, my).block = WATER) {
         w := getBlock(mx - 1, my).block = GRASS;
         e := getBlock(mx + 1, my).block = GRASS;

@@ -14,63 +14,6 @@ const TURN = 4;
 const MOUNTAIN = 5;
 
 img := null;
-blocks := [
-    {
-        "img": "water",
-        "isEdge": false,
-        "blocking": true,
-        "color": COLOR_DARK_BLUE,
-    },
-    {
-        "img": "grass",
-        "isEdge": false,
-        "blocking": false,
-        "color": COLOR_GREEN,
-    },
-    {
-        "img": "coast",
-        "isEdge": true,
-        "blocking": false,
-        "color": COLOR_BROWN,
-    },
-    {
-        "img": "coastcorner",
-        "isEdge": true,
-        "blocking": false,
-        "color": COLOR_BROWN,
-    },
-    {
-        "img": "coastturn",
-        "isEdge": true,
-        "blocking": false,
-        "color": COLOR_BROWN,
-    },
-    {
-        "img": "mtn5",
-        "isEdge": false,
-        "blocking": true,
-        "color": COLOR_MID_GRAY,
-    },
-    {
-        "img": "mtn3",
-        "isEdge": false,
-        "blocking": true,
-        "color": COLOR_WHITE,
-    },
-    {
-        "img": "mtn4",
-        "isEdge": false,
-        "blocking": false,
-        "color": COLOR_WHITE,
-    },
-    {
-        "img": "road1",
-        "isEdge": false,
-        "blocking": false,
-        "color": COLOR_DARK_GRAY,
-    },
-
-];
 map := {};
 player := {
     "x": 50,
@@ -96,18 +39,3 @@ const MODES = {
 mode := "editor";
 ticks := 0;
 
-# todo: move to lib
-def array_find_index(array, fx) {
-    i := 0; 
-    while(i < len(array)) {
-        if(fx(array[i])) {
-            return i;
-        }
-        i := i + 1;
-    }
-    return -1;
-}
-
-def getBlockIndex(name) {
-    return array_find_index(blocks, b => b.img = name);
-}
