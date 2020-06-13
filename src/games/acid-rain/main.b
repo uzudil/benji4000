@@ -119,7 +119,6 @@ def startLevel() {
 def drawUI() {
     drawText(0, 190, COLOR_WHITE, COLOR_BLACK, "Lives:" + player.lives);
     drawText(90, 190, COLOR_WHITE, COLOR_BLACK, "Score:" + player.points);
-    updateVideo();
 }
 
 def gameMode() {
@@ -220,5 +219,6 @@ def main() {
         } else {
             gameMode();
         }
+        updateVideo();
     }
 }

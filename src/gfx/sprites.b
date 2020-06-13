@@ -53,7 +53,7 @@ def main() {
     timer := 0;
     imgTimer := 0;
     while(isKeyDown(KeySpace) != true) {
-        # notice: no clearVideo()/updateVideo() in loop
+        # notice: no clearVideo() in loop
 
         if(getTicks() > timer) {
             # draw the sprite
@@ -75,5 +75,7 @@ def main() {
 
         # draw another one so we can see the animation
         drawSprite(30, 150, SPRITE_INDEX + 4, imgIndex, 0, 0);
+
+        updateVideo();
     }
 }

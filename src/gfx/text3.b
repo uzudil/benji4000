@@ -1,5 +1,5 @@
 
-const SPEED = 0.01;
+const SPEED = 0.5;
 
 def main() {
     setVideoMode(1);

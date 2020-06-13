@@ -1,7 +1,7 @@
 const SPEED_SLOW = 0.1;
 const SPEED_FAST = 0.05;
 const JUMP_AIR_TIME = 1;
-const VERTICAL_SPEED = 0.0175;
+const VERTICAL_SPEED = 0.015;
 const UP = 1;
 const DOWN = 2;
 const LEFT = 3;
@@ -159,7 +159,6 @@ def startLevel() {
 def drawUI() {
     drawText(0, 190, COLOR_WHITE, COLOR_BLACK, "Lives:" + player.lives);
     drawText(110, 190, COLOR_WHITE, COLOR_BLACK, "Keys:" + player.keys);
-    updateVideo();
 }
 
 def playJumpSound() {
@@ -277,5 +276,6 @@ def main() {
         } else {
             gameMode();
         }
+        updateVideo();
     }
 }

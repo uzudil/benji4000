@@ -20,7 +20,6 @@ def loadMap(name) {
         trace("Loaded map " + name);
         map := loadedData;
     }
-    trace(map);
 }
 
 def saveMap(name) {

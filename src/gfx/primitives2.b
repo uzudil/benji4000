@@ -1,5 +1,5 @@
 r := 10;
-dir := 0.01;
+dir := 0.5;
 
 def main() {
     setVideoMode(2);

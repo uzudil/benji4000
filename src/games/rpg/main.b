@@ -1,10 +1,7 @@
 def handleInput() {
     if(anyNonHelperKeyDown()) {
-        if(getTicks() > ticks) {
-            MODES[mode].handleInput();
-            ticks := getTicks() + 0.2;
-            return true;
-        }
+        MODES[mode].handleInput();
+        return true;
     } else {
         ticks := 0;
     }
@@ -48,11 +45,10 @@ def drawView(mx, my) {
 def renderGame() {
     drawUI();
     drawView(player.x, player.y);
-    updateVideo();    
 }
 
 def main() {
-    #setFps(15);
+    limitFps(30);
     setVideoMode(1);
     setBackground(COLOR_BLACK);
 
@@ -61,8 +57,8 @@ def main() {
     MODES[mode].init();
     MODES[mode].render();
     while(true) {
-        if(handleInput()) {
-            MODES[mode].render();
-        }
+        handleInput();
+        MODES[mode].render();
+        updateVideo();
     }
 }

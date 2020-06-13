@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
@@ -106,7 +107,9 @@ type Render struct {
 	Vao         uint32
 	Sprites     [8]Sprite
 	// the desired framerate of the bscript code. This is how often the video texture is updated
-	Fps float64
+	Fps           float64
+	UpdateScreen  bool
+	UpdateSprites bool
 
 	// input mode channels
 	InputMode     bool
@@ -323,6 +326,16 @@ func (render *Render) runSpriteCommand(command SpriteCommand) error {
 	return nil
 }
 
+func (render *Render) Sleep(lastTime float64) float64 {
+	now := glfw.GetTime()
+	d := now - lastTime
+	sleep := ((1.0 / render.Fps) - d) * 1000.0
+	if sleep > 0 {
+		time.Sleep(time.Duration(sleep) * time.Millisecond)
+	}
+	return now
+}
+
 // MainLoop is the main rendering loop where the video ram is sent to the screen.
 func (render *Render) MainLoop() {
 	defer glfw.Terminate()
@@ -344,33 +357,24 @@ func (render *Render) MainLoop() {
 	modelUniform := gl.GetUniformLocation(render.Program, gl.Str("model\x00"))
 	identity := mgl32.Ident4()
 
-	var lastTime, delta, lastUpdate float64
+	gl.UseProgram(render.Program)
+
+	var lastTime float64
+
+	var delta, lastUpdate float64
 	var nbFrames int
 	for !render.Window.ShouldClose() {
+
+		// block to reduce fan noise (if fps limited)
+		// this limits the speed of the opengl rendering thread
+		lastTime = render.Sleep(lastTime)
+
 		currentTime := glfw.GetTime()
-		delta = currentTime - lastTime
+		delta = currentTime - lastUpdate
 		nbFrames++
 		if delta >= 1.0 { // If last cout was more than 1 sec ago
-			render.Window.SetTitle(fmt.Sprintf("FPS: %.2f", float64(nbFrames)/delta))
+			render.Window.SetTitle(fmt.Sprintf("FPS: %.2f / %.2f", float64(nbFrames)/delta, render.Fps))
 			nbFrames = 0
-			lastTime = currentTime
-		}
-
-		gl.UseProgram(render.Program)
-
-		gl.ActiveTexture(gl.TEXTURE0)
-		gl.BindTexture(gl.TEXTURE_2D, texture)
-
-		// Cap bscript code fps to the desired limit
-		// This can mean that the video memory in gfx is not what is shown on screen...
-		delta = currentTime - lastUpdate
-		if delta > 1.0/render.Fps {
-			// make sure the video ram is not being updated in another goroutine
-			render.Lock.Lock()
-			// need to do this so go.Ptr() works. This could be a bug in go: https://github.com/golang/go/issues/14210
-			pixels := render.PixelMemory
-			gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, Width, Height, gl.RGB, gl.UNSIGNED_BYTE, gl.Ptr(&pixels[0]))
-			render.Lock.Unlock()
 			lastUpdate = currentTime
 		}
 
@@ -384,37 +388,60 @@ func (render *Render) MainLoop() {
 			// don't block
 		}
 
-		// gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-		gl.UniformMatrix4fv(modelUniform, 1, false, &identity[0])
-		gl.Uniform1i(texUniform, 0)
-		gl.Uniform1i(flipXUniform, 0)
-		gl.Uniform1i(flipYUniform, 0)
-		gl.BindVertexArray(render.Vao)
-		gl.DrawArrays(gl.TRIANGLES, 0, int32(len(screen)/8))
+		glfw.PollEvents()
 
-		gl.Enable(gl.BLEND)
-		// gl.BlendEquation(gl.MAX)
-		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+		swapBuffers := false
+		render.Lock.Lock()
+		if render.UpdateScreen {
+			gl.ActiveTexture(gl.TEXTURE0)
+			gl.BindTexture(gl.TEXTURE_2D, texture)
+
+			// need to do this so go.Ptr() works. This could be a bug in go: https://github.com/golang/go/issues/14210
+			pixels := render.PixelMemory
+			gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, Width, Height, gl.RGB, gl.UNSIGNED_BYTE, gl.Ptr(&pixels[0]))
+
+			// gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+			gl.UniformMatrix4fv(modelUniform, 1, false, &identity[0])
+			gl.Uniform1i(texUniform, 0)
+			gl.Uniform1i(flipXUniform, 0)
+			gl.Uniform1i(flipYUniform, 0)
+			gl.BindVertexArray(render.Vao)
+			gl.DrawArrays(gl.TRIANGLES, 0, int32(len(screen)/8))
+
+			render.UpdateScreen = false
+			swapBuffers = true
+		}
+		render.Lock.Unlock()
+
 		render.SpriteLock.Lock()
-		for _, sprite := range render.Sprites {
-			if sprite.Show {
-				gl.BindTexture(gl.TEXTURE_2D, sprite.Textures[sprite.ImageIndex])
-				gl.Uniform1i(texUniform, 0)
-				gl.Uniform1i(flipXUniform, sprite.FlipX)
-				gl.Uniform1i(flipYUniform, sprite.FlipY)
+		if swapBuffers || render.UpdateSprites {
+			gl.Enable(gl.BLEND)
+			// gl.BlendEquation(gl.MAX)
+			gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+			for _, sprite := range render.Sprites {
+				if sprite.Show {
+					gl.BindTexture(gl.TEXTURE_2D, sprite.Textures[sprite.ImageIndex])
+					gl.Uniform1i(texUniform, 0)
+					gl.Uniform1i(flipXUniform, sprite.FlipX)
+					gl.Uniform1i(flipYUniform, sprite.FlipY)
 
-				sprite.Model = mgl32.Ident4().
-					Mul4(mgl32.Translate3D(float32(sprite.X-Width/2)/float32(Width/2), -float32(sprite.Y-Height/2)/float32(Height/2), 0)).
-					Mul4(mgl32.Scale3D(float32(sprite.W)/float32(Width), float32(sprite.H)/float32(Height), 1))
+					sprite.Model = mgl32.Ident4().
+						Mul4(mgl32.Translate3D(float32(sprite.X-Width/2)/float32(Width/2), -float32(sprite.Y-Height/2)/float32(Height/2), 0)).
+						Mul4(mgl32.Scale3D(float32(sprite.W)/float32(Width), float32(sprite.H)/float32(Height), 1))
 
-				gl.UniformMatrix4fv(modelUniform, 1, false, &sprite.Model[0])
-				gl.DrawArrays(gl.TRIANGLES, 0, int32(len(screen)/8))
+					gl.UniformMatrix4fv(modelUniform, 1, false, &sprite.Model[0])
+					gl.DrawArrays(gl.TRIANGLES, 0, int32(len(screen)/8))
+				}
 			}
+			gl.Disable(gl.BLEND)
+
+			render.UpdateSprites = false
+			swapBuffers = true
 		}
 		render.SpriteLock.Unlock()
-		gl.Disable(gl.BLEND)
 
-		glfw.PollEvents()
-		render.Window.SwapBuffers()
+		if swapBuffers {
+			render.Window.SwapBuffers()
+		}
 	}
 }

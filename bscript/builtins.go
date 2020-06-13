@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"github.com/uzudil/benji4000/gfx"
@@ -68,7 +69,16 @@ func trace(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, nil
 }
 
-func setFps(ctx *Context, arg ...interface{}) (interface{}, error) {
+func sleep(ctx *Context, arg ...interface{}) (interface{}, error) {
+	ms, err := intArgs(ctx, 1, arg)
+	if err != nil {
+		return nil, err
+	}
+	time.Sleep(time.Duration(ms[0]) * time.Millisecond)
+	return nil, nil
+}
+
+func limitFps(ctx *Context, arg ...interface{}) (interface{}, error) {
 	fps, err := floatArgs(ctx, 1, arg)
 	if err != nil {
 		return nil, err
@@ -894,7 +904,8 @@ func Builtins() map[string]Builtin {
 		"pauseSound":           pauseSound,
 		"loopSound":            loopSound,
 		"clearSound":           clearSound,
-		"setFps":               setFps,
+		"limitFps":             limitFps,
+		"sleep":                sleep,
 	}
 }
 

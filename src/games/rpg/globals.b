@@ -36,7 +36,7 @@ blocks := [
     {
         "img": "coastcorner",
         "isEdge": true,
-        "blocking": true,
+        "blocking": false,
         "color": COLOR_BROWN,
     },
     {
@@ -46,11 +46,30 @@ blocks := [
         "color": COLOR_BROWN,
     },
     {
-        "img": "mtn",
+        "img": "mtn5",
         "isEdge": false,
         "blocking": true,
         "color": COLOR_MID_GRAY,
     },
+    {
+        "img": "mtn3",
+        "isEdge": false,
+        "blocking": true,
+        "color": COLOR_WHITE,
+    },
+    {
+        "img": "mtn4",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_WHITE,
+    },
+    {
+        "img": "road1",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_DARK_GRAY,
+    },
+
 ];
 map := {};
 player := {

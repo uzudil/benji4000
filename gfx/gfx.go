@@ -55,6 +55,8 @@ type Gfx struct {
 	SpritePosition [8]Rect
 	// sprite dimensions
 	SpriteDimensions [8][2]int
+
+	lastTime float64
 }
 
 const (
@@ -537,6 +539,7 @@ func (gfx *Gfx) DrawSprite(x, y, index, imgIndex, flipX, flipY int) error {
 	}
 
 	gfx.Render.SpriteLock.Lock()
+	gfx.Render.UpdateSprites = true
 	if gfx.VideoMode == GfxMultiColorMode {
 		x *= 2
 	}
@@ -680,7 +683,12 @@ func (gfx *Gfx) ClearVideo() error {
 }
 
 func (gfx *Gfx) UpdateVideo() error {
+	// block to reduce fan noise (if fps limited)
+	// this limits the speed of the bscript thread
+	gfx.lastTime = gfx.Render.Sleep(gfx.lastTime)
+
 	gfx.Render.Lock.Lock()
+	gfx.Render.UpdateScreen = true
 	for index, colorIndex := range gfx.VideoMemory {
 		gfx.Render.PixelMemory[index*3] = gfx.Colors[colorIndex*3]
 		gfx.Render.PixelMemory[index*3+1] = gfx.Colors[colorIndex*3+1]

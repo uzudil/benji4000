@@ -294,8 +294,6 @@ room := {
                 x := x + 1;
             }
         }
-
-        updateVideo();
     },
     "takeGem": self => {
         self.gems := self.gems - 1;
@@ -496,6 +494,7 @@ intro := {
                 }            
                 self.intro_timer := getTicks() + 0.01;
             }
+            updateVideo();
         }
         self.intro := INTRO_DONE;
         delSprite(INTRO_SPRITE);
@@ -534,5 +533,6 @@ def main() {
         } else {
             room.draw();
         }
+        updateVideo();
     }
 }
