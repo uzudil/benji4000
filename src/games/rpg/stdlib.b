@@ -41,4 +41,3 @@ def array_find(array, fx) {
     }
     return -1;
 }
-

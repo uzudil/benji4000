@@ -57,7 +57,7 @@ def blockPalette(x, y) {
         }
         i := i + 1;
         xp := xp + TILE_W;
-        if(i % 5 = 0) {
+        if(i % 8 = 0) {
             xp := x + 5;
             yp := yp + TILE_H;
         }

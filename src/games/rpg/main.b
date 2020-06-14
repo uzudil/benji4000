@@ -54,6 +54,7 @@ def main() {
 
     img := load("img.dat");
     
+    setColor(COLOR_TEAL, 24, 120, 24);
     initBlocks();
     MODES[mode].init();
     MODES[mode].render();

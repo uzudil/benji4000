@@ -107,5 +107,47 @@ blocks := [
         "blocking": false,
         "color": COLOR_DARK_GRAY,
     },
+    {
+        "img": "treesm",
+        "type": "tree-small",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_TEAL,
+    },
+    {
+        "img": "treesm2",
+        "type": "tree-small",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_TEAL,
+    },
+    {
+        "img": "castle",
+        "type": "castle",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_RED,
+    },
+    {
+        "img": "swamp",
+        "type": "swamp",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_GREEN,
+    },
+    {
+        "img": "village",
+        "type": "village",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_RED,
+    },
+    {
+        "img": "cave",
+        "type": "cave",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_RED,
+    },
 
 ];
