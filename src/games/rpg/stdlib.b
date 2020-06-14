@@ -41,3 +41,11 @@ def array_find(array, fx) {
     }
     return -1;
 }
+
+def array_foreach(a, fx) {
+    i := 0; 
+    while(i < len(array)) {
+        fx(i, array[i]);
+        i := i + 1;
+    }
+}

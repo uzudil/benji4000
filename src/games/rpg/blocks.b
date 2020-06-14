@@ -149,5 +149,12 @@ blocks := [
         "blocking": false,
         "color": COLOR_RED,
     },
+    {
+        "img": "fighter1",
+        "type": "fighter",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_RED,
+    },
 
 ];
