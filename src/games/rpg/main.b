@@ -1,9 +1,12 @@
 def handleInput() {
-    if(anyNonHelperKeyDown()) {
-        MODES[mode].handleInput();
-        return true;
-    } else {
-        ticks := 0;
+    if(getTicks() > ticks) {
+        if(anyNonHelperKeyDown()) {
+            MODES[mode].handleInput();
+            ticks := getTicks() + 0.1;
+            return true;
+        } else {
+            ticks := getTicks() + 0.05;
+        }
     }
     return false;    
 }
@@ -33,9 +36,7 @@ def drawView(mx, my) {
                 #drawImageRot(x * TILE_W + 5, y * TILE_H + 5, 0, img[blocks[WATER].img]);
             }
             drawImageRot(x * TILE_W + 5, y * TILE_H + 5, mapBlock.rot, img[block.img]);
-            if(x = 5 && y = 5) {
-                MODES[mode].renderMapCursor(x * TILE_W + 5, y * TILE_H + 5);
-            }
+            MODES[mode].drawViewAt(x * TILE_W + 5, y * TILE_H + 5, mx - 5 + x, my - 5 + y);
             y := y + 1;
         }
         x := x + 1;
@@ -53,6 +54,7 @@ def main() {
     setBackground(COLOR_BLACK);
 
     img := load("img.dat");
+    links := load("links");
     
     setColor(COLOR_TEAL, 24, 120, 24);
     initBlocks();

@@ -14,24 +14,26 @@ const TURN = 4;
 const MOUNTAIN = 5;
 
 img := null;
+links := {};
+mapName := "world1";
 map := {};
 player := {
     "x": 50,
     "y": 50,
-    "map": "world",
+    "map": mapName,
 };
 
 const MODES = {
     "editor": {
         "init": self => initEditor(),
         "render": self => renderEditor(),
-        "renderMapCursor": (self, x, y) => renderEditorMapCursor(x, y),
+        "drawViewAt": (self, x, y, mx, my) => editorDrawViewAt(x, y, mx, my),
         "handleInput": self => handleEditorInput(),
     },
     "game": {
-        "init": self => loadMap("world"),
+        "init": self => trace("implement me: handleInput"),
         "render": self => renderGame(),
-        "renderMapCursor": (self, x, y) => trace("implement me: renderMapCursor"),
+        "drawViewAt": (self, x, y, mx, my) => trace("implement me: handleInput"),
         "handleInput": (self, x, y) => trace("implement me: handleInput"),
     }
 };

@@ -1,12 +1,65 @@
 editor := {
-    "map": "world1",
     "blockIndex": 0,
     "x": 50,
     "y": 50,
 };
 
 def initEditor() {
-    loadMap(editor.map);
+    loadMap(mapName);
+    if(map = null) {
+        newMap(mapName, 96, 96);
+    }    
+}
+
+def editorEnterMap() {
+    key := "" + editor.x + "," + editor.y;
+    if(links[mapName] != null) {
+        s := links[mapName][key];
+        if(s != null) {
+            loadMap(s);
+            editor.x := int(map.width/2);
+            editor.y := int(map.height/2);
+        }
+    }
+}
+
+def addLink() {
+    if(links[mapName] = null) {
+        links[mapName] := {};
+    }
+    setVideoMode(0);
+    name := input("New map name:");
+    key := "" + editor.x + "," + editor.y;
+    links[mapName][key] := name;
+    save("links", links);
+    saveMap();
+    loadMap(name);
+    if(map = null) {
+        w := int(input("Width:"));
+        h := int(input("Height:"));
+        setVideoMode(1);
+        newMap(name, w, h);
+        saveMap();
+    } else {
+        setVideoMode(1);
+    }
+    editor.x := int(map.width/2);
+    editor.y := int(map.height/2);
+}
+
+def delLink() {
+    key := "" + editor.x + "," + editor.y;
+    if(links[mapName] != null) {
+        s := links[mapName][key];
+        if(s != null) {
+            if(links[s] != null) {
+                del links[s];
+            }
+            del links[mapName][key];
+            saveMap();
+            save("links", links);
+        }
+    }
 }
 
 def renderEditor() {
@@ -23,7 +76,7 @@ def editorUI() {
 
     blockPalette(x, y);
 
-    drawText(x + 5, 80, COLOR_WHITE, COLOR_BLACK, "Map:" + editor.map);
+    drawText(x + 5, 80, COLOR_WHITE, COLOR_BLACK, "Map:" + mapName);
     drawText(x + 5, 90, COLOR_WHITE, COLOR_BLACK, "Pos:" + editor.x + "," + editor.y);
 
     # the map
@@ -44,6 +97,8 @@ def drawMap(x, y) {
         }
         xp := xp + 1;
     }
+    drawRect(x - 1, y - 1, x - 1 + map.width, y - 1 + map.height, COLOR_MID_GRAY);
+    drawRect(x + editor.x - 5, y + editor.y - 5, x + editor.x + 5, y + editor.y + 5, COLOR_YELLOW);
 }
 
 def blockPalette(x, y) {
@@ -64,11 +119,34 @@ def blockPalette(x, y) {
     }
 }
 
-def renderEditorMapCursor(x, y) {
-    drawRect(x, y, x + TILE_W - 1, y + TILE_H - 1, COLOR_YELLOW);
+def editorDrawViewAt(x, y, mx, my) {
+    if(mx = editor.x && my = editor.y) {
+        drawRect(x, y, x + TILE_W - 1, y + TILE_H - 1, COLOR_YELLOW);
+    }
+    if(links[mapName] != null) {
+        key := "" + mx + "," + my;
+        if(links[mapName][key] != null) {
+            drawRect(x + 1, y + 1, x + TILE_W - 2, y + TILE_H - 2, COLOR_RED);
+        }
+    }
 }
 
 def handleEditorInput() {
+    if(isKeyDown(KeyEnter)) {
+        while(isKeyDown(KeyEnter)) {
+        }
+        editorEnterMap();
+    }
+    if(isKeyDown(KeyA)) {
+        while(isKeyDown(KeyA)) {
+        }
+        addLink();
+    }
+    if(isKeyDown(KeyD)) {
+        while(isKeyDown(KeyD)) {
+        }
+        delLink();
+    }    
     if(isKeyDown(KeyUp)) {
         editor.y := editor.y - 1;
         if(editor.y < 0) {
@@ -113,7 +191,29 @@ def handleEditorInput() {
         }
     }
     if(isKeyDown(KeyS)) {
-        saveMap(editor.map);
+        saveMap();
+    }
+    if(isKeyDown(KeyF)) {
+        fillMap(editor.x, editor.y, getBlock(editor.x, editor.y).block);
+    }
+}
+
+def fillMap(x, y, blockIndex) {
+    #trace("fill: pos=" + x + "," + y + " blockIndex=" + blockIndex + " vs " + getBlock(x, y).block);
+    if(getBlock(x, y).block = blockIndex) {
+        setBlock(x, y, editor.blockIndex, 0);
+        if(getBlock(x - 1, y).block = blockIndex) {
+            fillMap(x - 1, y, blockIndex);
+        }
+        if(getBlock(x + 1, y).block = blockIndex) {
+            fillMap(x + 1, y, blockIndex);
+        }        
+        if(getBlock(x, y - 1).block = blockIndex) {
+            fillMap(x, y - 1, blockIndex);
+        }
+        if(getBlock(x, y + 1).block = blockIndex) {
+            fillMap(x, y + 1, blockIndex);
+        }                
     }
 }
 

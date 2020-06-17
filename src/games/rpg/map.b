@@ -1,30 +1,36 @@
-def loadMap(name) {
-    loadedData := load(name);
-    if(loadedData = null) {
-        map := {
-            "blocks": [],
-            "width": 96,
-            "height": 96,
-        };
-        x := 0;
-        while(x < map.width) {
-            map.blocks[x] := [];
-            y := 0;
-            while(y < map.height) {
-                map.blocks[x][y] := { "block": 0, "rot": 0 };
-                y := y + 1;
-            }
-            x := x + 1;
+def newMap(name, w, h) {
+    mapName := name;
+    map := {
+        "blocks": [],
+        "width": w,
+        "height": h,
+    };
+    spaceIndex := getBlockIndexByName("space");
+    x := 0;
+    while(x < map.width) {
+        map.blocks[x] := [];
+        y := 0;
+        while(y < map.height) {
+            map.blocks[x][y] := { "block": spaceIndex, "rot": 0 };
+            y := y + 1;
         }
-    } else {
-        trace("Loaded map " + name);
-        map := loadedData;
+        x := x + 1;
     }
 }
 
-def saveMap(name) {
-    save(name, map);
-    trace("Saved map " + name);
+def loadMap(name) {
+    mapName := name;
+    map := load(name);
+    if(map = null) {
+        trace(name + " map not found");
+    } else {
+        trace("Loaded map " + name);
+    }
+}
+
+def saveMap() {
+    save(mapName, map);
+    trace("Saved map " + mapName);
 }
 
 def normalizeMapCoords(mx, my) {

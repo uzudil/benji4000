@@ -37,6 +37,12 @@ def handleInput() {
         return 0;
     }
 
+    if(isKeyDown(Key1)) {
+        setVideoMode(1);
+    }
+    if(isKeyDown(Key2)) {
+        setVideoMode(2);
+    }
     if(isKeyDown(KeyH)) {
         mode := HELP_MODE;
     }

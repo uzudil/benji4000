@@ -156,5 +156,40 @@ blocks := [
         "blocking": false,
         "color": COLOR_RED,
     },
+    {
+        "img": "brick2",
+        "type": "brick",
+        "isEdge": false,
+        "blocking": true,
+        "color": COLOR_RED,
+    },
+    {
+        "img": "brick",
+        "type": "brickdoor",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_RED,
+    },
+    {
+        "img": "space",
+        "type": "space",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_BLACK,
+    },
+    {
+        "img": "floor1",
+        "type": "floor1",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_BROWN,
+    },
+    {
+        "img": "floor2",
+        "type": "floor2",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_LIGHT_GRAY,
+    },
 
 ];
