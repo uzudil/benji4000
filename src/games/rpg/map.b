@@ -24,6 +24,19 @@ def loadMap(name) {
     if(map = null) {
         trace(name + " map not found");
     } else {
+        x := 0;
+        while(x < map.width) {
+            y := 0;
+            while(y < map.height) {
+                b := map.blocks[x][y];
+                if(b.xflip = null) {
+                    b["xflip"] := 0;
+                    b["yflip"] := 0;
+                }
+                y := y + 1;
+            }
+            x := x + 1;
+        }
         trace("Loaded map " + name);
     }
 }
@@ -55,9 +68,13 @@ def getBlock(mx, my) {
 }
 
 def setBlock(mx, my, blockIndex, rot) {
+    setBlockFlip(mx, my, blockIndex, rot, 0, 0);
+}
+
+def setBlockFlip(mx, my, blockIndex, rot, xflip, yflip) {
     c := normalizeMapCoords(mx, my);
     if(map.blocks[c.x][c.y] = null) {
-        map.blocks[c.x][c.y] := { "block": blockIndex, "rot": rot };
+        map.blocks[c.x][c.y] := { "block": blockIndex, "rot": rot, "xflip": xflip, "yflip": yflip };
     } else {
         if(map.blocks[c.x][c.y].block != blockIndex || map.blocks[c.x][c.y].rot != rot) {
             map.blocks[c.x][c.y].block := blockIndex;

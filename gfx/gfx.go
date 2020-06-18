@@ -417,7 +417,7 @@ func (gfx *Gfx) GetImage(x, y, x2, y2 int) (map[string]interface{}, error) {
 	return img, nil
 }
 
-func (gfx *Gfx) DrawImage(x, y int, img map[string]interface{}, rot int) error {
+func (gfx *Gfx) DrawImage(x, y int, img map[string]interface{}, rot, xflip, yflip int) error {
 	w := img["width"].(int)
 	h := img["height"].(int)
 	data := img["data"].([]byte)
@@ -439,6 +439,12 @@ func (gfx *Gfx) DrawImage(x, y int, img map[string]interface{}, rot int) error {
 					if rot == 3 {
 						xp = x + yy
 						yp = y + ((w - 1) - xx)
+					}
+					if xflip == 1 {
+						xp = x + ((w - 1) - xx)
+					}
+					if yflip == 1 {
+						yp = y + ((h - 1) - yy)
 					}
 					gfx.SetPixel(xp, yp, data[index])
 				}

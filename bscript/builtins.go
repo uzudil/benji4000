@@ -304,19 +304,19 @@ func drawImage(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("Third argument should be an image")
 	}
-	return nil, ctx.Video.DrawImage(i[0], i[1], img, 0)
+	return nil, ctx.Video.DrawImage(i[0], i[1], img, 0, 0, 0)
 }
 
 func drawImageRot(ctx *Context, arg ...interface{}) (interface{}, error) {
-	i, err := intArgs(ctx, 3, arg)
+	i, err := intArgs(ctx, 5, arg)
 	if err != nil {
 		return nil, err
 	}
-	img, ok := arg[3].(map[string]interface{})
+	img, ok := arg[5].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Third argument should be an image")
+		return nil, fmt.Errorf("Fifth argument should be an image")
 	}
-	return nil, ctx.Video.DrawImage(i[0], i[1], img, i[2])
+	return nil, ctx.Video.DrawImage(i[0], i[1], img, i[2], i[3], i[4])
 }
 
 func getImageWidth(ctx *Context, arg ...interface{}) (interface{}, error) {

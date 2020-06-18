@@ -15,9 +15,11 @@ def imgTest() {
     i := 0;
     while(i < 3) {
         drawImage(i * 50, 80, img);
-        drawImageRot(i * 50, 135, i + 1, img);
+        drawImageRot(i * 50, 135, i + 1, 0, 0, img);
         i := i + 1;
     }
+    drawImageRot(150, 135, 0, 1, 0, img);
+    drawImageRot(200, 135, 0, 0, 1, img);
         
     drawText(10, 180, COLOR_WHITE, COLOR_BLACK, "Press SPACE");
     while(isKeyDown(KeySpace) != true) {

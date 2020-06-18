@@ -32,10 +32,7 @@ def drawView(mx, my) {
         while(y < MAP_VIEW_H) {
             mapBlock := getBlock(mx - 5 + x, my - 5 + y);
             block := blocks[mapBlock.block];
-            if(block.isEdge) {
-                #drawImageRot(x * TILE_W + 5, y * TILE_H + 5, 0, img[blocks[WATER].img]);
-            }
-            drawImageRot(x * TILE_W + 5, y * TILE_H + 5, mapBlock.rot, img[block.img]);
+            drawImageRot(x * TILE_W + 5, y * TILE_H + 5, mapBlock.rot, mapBlock.xflip, mapBlock.yflip, img[block.img]);
             MODES[mode].drawViewAt(x * TILE_W + 5, y * TILE_H + 5, mx - 5 + x, my - 5 + y);
             y := y + 1;
         }

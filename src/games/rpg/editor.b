@@ -78,6 +78,7 @@ def editorUI() {
 
     drawText(x + 5, 80, COLOR_WHITE, COLOR_BLACK, "Map:" + mapName);
     drawText(x + 5, 90, COLOR_WHITE, COLOR_BLACK, "Pos:" + editor.x + "," + editor.y);
+    drawText(5, 190, COLOR_MID_GRAY, COLOR_BLACK, "Press H for help");
 
     # the map
     drawMap(x + 5, 100);
@@ -102,10 +103,11 @@ def drawMap(x, y) {
 }
 
 def blockPalette(x, y) {
-    i := 0;
+    start := int(editor.blockIndex / 32) * 32;
+    i := start;
     xp := x + 5;
     yp := y + 5;
-    while(i < len(blocks)) {
+    while(i < len(blocks) && i - start < 32) {
         drawImage(xp, yp, img[blocks[i].img]);
         if(i = editor.blockIndex) {
             drawRect(xp, yp, xp + TILE_W - 1, yp + TILE_H - 1, COLOR_YELLOW);
@@ -195,6 +197,48 @@ def handleEditorInput() {
     }
     if(isKeyDown(KeyF)) {
         fillMap(editor.x, editor.y, getBlock(editor.x, editor.y).block);
+    }
+    if(isKeyDown(KeyR)) {
+        b := getBlock(editor.x, editor.y);
+        r := b.rot + 1;
+        if(r >= 4) {
+            r := 0;
+        }
+        setBlock(editor.x, editor.y, b.block, r);
+    }
+    if(isKeyDown(KeyX)) {
+        b := getBlock(editor.x, editor.y);
+        if(b.xflip = 0) {
+            b.xflip := 1;
+        } else {
+            b.xflip := 0;
+        }
+    }
+    if(isKeyDown(KeyH)) {
+        setVideoMode(0);
+        print("Keys:");
+        print("arrows - move");
+        print("shift + arrows, Space - draw");
+        print("R - rotate tile");
+        print("X - flip tile X");
+        print("Y - flip tile Y");
+        print("S - Save map");
+        print("A - Add link");
+        print("D - Delete link");
+        print("Enter - Load linked map");
+        print("[,] - change tile");
+        print("Press any key");
+        while(anyKeyDown() = false) {
+        }
+        setVideoMode(1);
+    }
+    if(isKeyDown(KeyY)) {
+        b := getBlock(editor.x, editor.y);
+        if(b.yflip = 0) {
+            b.yflip := 1;
+        } else {
+            b.yflip := 0;
+        }
     }
 }
 
