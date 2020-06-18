@@ -17,7 +17,7 @@ import (
 
 var ANON_COUNT uint32
 
-const STACK_LIMIT = 1000
+const STACK_LIMIT = 10000
 
 type Evaluatable interface {
 	Evaluate(ctx *Context) (interface{}, error)

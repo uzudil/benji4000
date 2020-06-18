@@ -11,7 +11,7 @@ def newMap(name, w, h) {
         map.blocks[x] := [];
         y := 0;
         while(y < map.height) {
-            map.blocks[x][y] := { "block": spaceIndex, "rot": 0 };
+            map.blocks[x][y] := { "block": spaceIndex, "rot": 0, "xflip": 0, "yflip": 0 };
             y := y + 1;
         }
         x := x + 1;
@@ -36,6 +36,9 @@ def loadMap(name) {
                 y := y + 1;
             }
             x := x + 1;
+        }
+        if(map["secrets"] = null) {
+            map["secrets"] := {};
         }
         trace("Loaded map " + name);
     }
@@ -79,6 +82,8 @@ def setBlockFlip(mx, my, blockIndex, rot, xflip, yflip) {
         if(map.blocks[c.x][c.y].block != blockIndex || map.blocks[c.x][c.y].rot != rot) {
             map.blocks[c.x][c.y].block := blockIndex;
             map.blocks[c.x][c.y].rot := rot;
+            map.blocks[c.x][c.y].xflip := xflip;
+            map.blocks[c.x][c.y].yflip := yflip;
         }
     }
 }
