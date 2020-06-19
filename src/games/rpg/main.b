@@ -2,7 +2,7 @@ def handleInput() {
     if(getTicks() > ticks) {
         if(anyNonHelperKeyDown()) {
             MODES[mode].handleInput();
-            ticks := getTicks() + 0.1;
+            ticks := getTicks() + 0.15;
             return true;
         } else {
             ticks := getTicks() + 0.05;
@@ -57,6 +57,7 @@ def main() {
     initBlocks();
     MODES[mode].init();
     MODES[mode].render();
+    updateVideo();
     while(true) {
         handleInput();
         MODES[mode].render();

@@ -2,10 +2,11 @@ editor := {
     "blockIndex": 0,
     "x": 50,
     "y": 50,
+    "showMap": false,
 };
 
 def initEditor() {
-    mapName := "bonefell";
+#    mapName := "bonefell";
     loadMap(mapName);
     if(map = null) {
         newMap(mapName, 96, 96);
@@ -73,7 +74,6 @@ def delLink() {
 def renderEditor() {
     editorUI();
     drawView(editor.x, editor.y);
-    updateVideo();    
 }
 
 def editorUI() {
@@ -89,7 +89,9 @@ def editorUI() {
     drawText(5, 190, COLOR_MID_GRAY, COLOR_BLACK, "Press H for help");
 
     # the map
-    drawMap(x + 5, 100);
+    if(editor.showMap) {
+        drawMap(x + 5, 100);
+    }
 }
 
 def drawMap(x, y) {
@@ -164,6 +166,15 @@ def handleEditorInput() {
         while(isKeyDown(KeyD)) {
         }
         delLink();
+    }    
+    if(isKeyDown(KeyM)) {
+        while(isKeyDown(KeyM)) {
+        }
+        if(editor.showMap) {
+            editor.showMap := false;
+        } else {
+            editor.showMap := true;
+        }
     }    
     if(isKeyDown(KeyUp)) {
         editor.y := editor.y - 1;
@@ -245,6 +256,7 @@ def handleEditorInput() {
         print("D - Delete link/secret door");
         print("Enter - Load linked map");
         print("[,] - change tile");
+        print("M - toggle map");
         print("Press any key");
         while(anyKeyDown() = false) {
         }

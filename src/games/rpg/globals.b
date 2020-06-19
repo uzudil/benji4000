@@ -24,6 +24,11 @@ player := {
 };
 
 const MODES = {
+    "title": {
+        "init": self => initTitle(),
+        "render": self => renderTitle(),
+        "handleInput": self => titleInput(),
+    },
     "editor": {
         "init": self => initEditor(),
         "render": self => renderEditor(),
@@ -38,6 +43,6 @@ const MODES = {
     }
 };
 
-mode := "editor";
+mode := "title";
 ticks := 0;
 
