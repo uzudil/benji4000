@@ -2,7 +2,7 @@ editor := {
     "blockIndex": 0,
     "x": 50,
     "y": 50,
-    "showMap": false,
+    "showMap": true,
 };
 
 def initEditor() {
@@ -102,7 +102,7 @@ def drawMap(x, y) {
             if(xp = editor.x && yp = editor.y) {
                 setPixel(x + xp, y + yp, COLOR_YELLOW);
             } else {
-                setPixel(x + xp, y + yp, blocks[getBlock(xp, yp).block].color);
+                setPixel(x + xp, y + yp, minimap[xp][yp]);
             }
             yp := yp + 1;
         }

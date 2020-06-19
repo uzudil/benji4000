@@ -17,6 +17,7 @@ img := null;
 links := {};
 mapName := "world1";
 map := {};
+minimap := [];
 player := {
     "x": 50,
     "y": 50,

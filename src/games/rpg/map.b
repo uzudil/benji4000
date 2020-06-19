@@ -24,15 +24,18 @@ def loadMap(name) {
     if(map = null) {
         trace(name + " map not found");
     } else {
+        minimap := [];
         x := 0;
         while(x < map.width) {
             y := 0;
+            minimap[x] := [];
             while(y < map.height) {
                 b := map.blocks[x][y];
                 if(b.xflip = null) {
                     b["xflip"] := 0;
                     b["yflip"] := 0;
                 }
+                minimap[x][y] := blocks[b.block].color;
                 y := y + 1;
             }
             x := x + 1;
@@ -86,4 +89,5 @@ def setBlockFlip(mx, my, blockIndex, rot, xflip, yflip) {
             map.blocks[c.x][c.y].yflip := yflip;
         }
     }
+    minimap[c.x][c.y] := blocks[map.blocks[c.x][c.y].block].color;
 }
