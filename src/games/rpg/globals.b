@@ -18,11 +18,6 @@ links := {};
 mapName := "world1";
 map := {};
 minimap := [];
-player := {
-    "x": 50,
-    "y": 50,
-    "map": mapName,
-};
 
 const MODES = {
     "title": {
@@ -33,14 +28,16 @@ const MODES = {
     "editor": {
         "init": self => initEditor(),
         "render": self => renderEditor(),
+        "isBlockVisible": (self, mx, my) => true,
         "drawViewAt": (self, x, y, mx, my) => editorDrawViewAt(x, y, mx, my),
         "handleInput": self => handleEditorInput(),
     },
     "game": {
-        "init": self => trace("implement me: handleInput"),
+        "init": self => initGame(),
         "render": self => renderGame(),
-        "drawViewAt": (self, x, y, mx, my) => trace("implement me: handleInput"),
-        "handleInput": (self, x, y) => trace("implement me: handleInput"),
+        "isBlockVisible": (self, mx, my) => gameIsBlockVisible(mx, my),
+        "drawViewAt": (self, x, y, mx, my) => gameDrawViewAt(x, y, mx, my),
+        "handleInput": self => gameInput(),
     }
 };
 

@@ -251,14 +251,14 @@ blocks := [
         "img": "bed",
         "type": "bed",
         "isEdge": false,
-        "blocking": true,
+        "blocking": false,
         "color": COLOR_TEAL,
     },
     {
         "img": "bed2",
         "type": "bed2",
         "isEdge": false,
-        "blocking": true,
+        "blocking": false,
         "color": COLOR_TEAL,
     },
     {
@@ -323,5 +323,21 @@ blocks := [
         "isEdge": false,
         "blocking": false,
         "color": COLOR_BLACK,
+    },
+    {
+        "img": "door1",
+        "type": "doorclosed1",
+        "isEdge": false,
+        "blocking": true,
+        "color": COLOR_BROWN,
+        "nextState": "door2",
+    },
+    {
+        "img": "door2",
+        "type": "dooropen1",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_BROWN,
+        "nextState": "door1",
     },
 ];

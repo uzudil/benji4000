@@ -1,0 +1,1 @@
+{"almoc":{"17,31":"world1","5,13":"bonefell"},"bonefell":{"2,5":"almoc","48,68":"redclaw"},"redclaw":{"1,17":"bonefell","11,20":"world1","22,6":"redclaw2"},"redclaw2":{"12,2":"redclaw"},"world1":{"3,24":"almoc","55,72":"redclaw"}}

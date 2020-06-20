@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"math"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -139,6 +140,23 @@ func length(ctx *Context, arg ...interface{}) (interface{}, error) {
 		return float64(len(s)), nil
 	}
 	return float64(len(*a)), nil
+}
+
+func split(ctx *Context, arg ...interface{}) (interface{}, error) {
+	s, ok := arg[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("argument 1 should be a string")
+	}
+	d, ok := arg[1].(string)
+	if !ok {
+		return nil, fmt.Errorf("argument 2 should be a string")
+	}
+	a := strings.Split(s, d)
+	arr := make([]interface{}, len(a))
+	for i, aa := range a {
+		arr[i] = aa
+	}
+	return &arr, nil
 }
 
 func substr(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -593,7 +611,11 @@ func saveFile(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, ioutil.WriteFile(filepath.Join(*ctx.Sandbox, filename), []byte(jsonstr), 0644)
+	dir := filepath.Join(*ctx.Sandbox, "files")
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		os.Mkdir(dir, os.ModePerm)
+	}
+	return nil, ioutil.WriteFile(filepath.Join(*ctx.Sandbox, "files", filename), []byte(jsonstr), 0644)
 }
 
 // Images need extra processing. Look for images in the loaded data...
@@ -674,9 +696,12 @@ func loadFile(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	bytes, err := ioutil.ReadFile(filepath.Join(*ctx.Sandbox, filename))
+	bytes, err := ioutil.ReadFile(filepath.Join(*ctx.Sandbox, "files", filename))
 	if err != nil {
-		return nil, nil
+		bytes, err = ioutil.ReadFile(filepath.Join(*ctx.Sandbox, filename))
+		if err != nil {
+			return nil, nil
+		}
 	}
 	data := map[string]interface{}{}
 	err = json.Unmarshal(bytes, &data)
@@ -854,6 +879,7 @@ func Builtins() map[string]Builtin {
 		"len":                  length,
 		"keys":                 keys,
 		"substr":               substr,
+		"split":                split,
 		"replace":              replace,
 		"debug":                debug,
 		"assert":               assert,
