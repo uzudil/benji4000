@@ -1,10 +1,32 @@
+titleMode := 0;
+
 def initTitle() {
 }
 
 def renderTitle() {
-    drawText(20, 30, COLOR_GREEN, COLOR_BLACK, "The Title");
-    drawText(20, 45, COLOR_MID_GRAY, COLOR_BLACK, "Press SPACE to start");
+    clearVideo();
+    if(titleMode = 0) {
+        drawText(20, 30, COLOR_GREEN, COLOR_BLACK, "The Curse of Svaltfen");
+        drawText(20, 185, COLOR_DARK_GRAY, COLOR_BLACK, "Press SPACE to start");
+    }
+    if(titleMode = 1) {
+        drawText(10, 10, COLOR_MID_GRAY, COLOR_BLACK, "...You see a faint light coming closer.");
+        drawText(10, 20, COLOR_MID_GRAY, COLOR_BLACK, "Memories from past lives echo in");
+        drawText(10, 30, COLOR_MID_GRAY, COLOR_BLACK, "your brain.");
 
+        drawText(10, 50, COLOR_LIGHT_GRAY, COLOR_BLACK, "I have lived before...");
+        drawText(10, 60, COLOR_LIGHT_GRAY, COLOR_BLACK, "Walked the earth many eons ago...");
+
+        drawText(10, 80, COLOR_MID_GRAY, COLOR_BLACK, "You remember completing tasks of");
+        drawText(10, 90, COLOR_MID_GRAY, COLOR_BLACK, "great evil.");
+        drawText(10, 100, COLOR_MID_GRAY, COLOR_BLACK, "But it was necessary then...");
+        drawText(10, 110, COLOR_MID_GRAY, COLOR_BLACK, "...And it is so again.");
+
+        drawText(10, 130, COLOR_MID_GRAY, COLOR_BLACK, "You awake then fully, in darkness,");
+        drawText(10, 140, COLOR_MID_GRAY, COLOR_BLACK, "somewhere underground.");
+
+        drawText(20, 185, COLOR_DARK_GRAY, COLOR_BLACK, "Press SPACE to start");
+    }
 }
 
 def titleInput() {
@@ -16,7 +38,11 @@ def titleInput() {
     if(isKeyDown(KeySpace)) {
         while(isKeyDown(KeySpace)) {
         }
-        mode := "game";
+        if(titleMode < 1) {
+            titleMode := titleMode + 1;
+        } else {
+            mode := "game";
+        }
     }
     if(mode != "title") {
         MODES[mode].init();

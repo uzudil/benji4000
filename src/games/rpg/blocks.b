@@ -340,4 +340,11 @@ blocks := [
         "color": COLOR_BROWN,
         "nextState": "door1",
     },
+    {
+        "img": "gate",
+        "type": "gate",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_BROWN,
+    },
 ];

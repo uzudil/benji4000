@@ -127,21 +127,47 @@ def gameEnterMap() {
     }
 }
 
-def gameUseDoor() {
+def aroundPlayer(fx) {
     dx := -1;
     while(dx <= 1) {
         dy := -1;
         while(dy <= 1) {
-            block := blocks[getBlock(player.x + dx, player.y + dy).block];
-            if(block["nextState"] != null) {
-                setBlock(player.x + dx, player.y + dy, getBlockIndexByName(block.nextState), 0);
-                gameMessage("Use door");
-                return 0;
+            res := fx(player.x + dx, player.y + dy);
+            if(res != null) {
+                return res;
             }
             dy := dy + 1;
         }
         dx := dx + 1;
     }
+    return null;
+}
+
+def gameUseDoor() {
+    aroundPlayer((x, y) => {
+        block := blocks[getBlock(x, y).block];
+        if(block["nextState"] != null) {
+            setBlock(x, y, getBlockIndexByName(block.nextState), 0);
+            gameMessage("Use door");
+            return 1;
+        } else {
+            return null;
+        }
+    });
+}
+
+def gameSearch() {
+    aroundPlayer((x, y) => {
+        space := getBlockIndexByName("space");
+        block := getBlock(x, y).block;
+        if(map.secrets["" + x + "," + y] = 1 && block != space) {
+            setBlock(x, y, space, 0);
+            gameMessage("Found a secret door!");
+            return 1;
+        } else {
+            return null;
+        }
+    });
 }
 
 def gameMessage(message) {
@@ -156,6 +182,7 @@ def gameInput() {
         }
         gameEnterMap();
         gameUseDoor();
+        gameSearch();
     }
     if(isKeyDown(KeyUp)) {
         player.y := player.y - 1;
@@ -170,7 +197,7 @@ def gameInput() {
         player.x := player.x + 1;
     }
     block := blocks[getBlock(player.x, player.y).block];
-    if(block.blocking) {
+    if(block.blocking || player.x < 0 || player.y < 0 || player.x >= map.width || player.y >= map.height) {
         player.x := ox;
         player.y := oy;
     }
