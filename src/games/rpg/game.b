@@ -3,26 +3,65 @@ player := {
     "y": 4,
     "map": "bonefell",
     "blockIndex": 0,
+    "messages": [],
+};
+
+const MAP_MESSAGES = {
+    "almoc": "You arrive in Almoc",
+    "redclaw": "The forest fastness of Redclaw",
+    "bonefell": "Bonefell dungeon",
 };
 
 def initGame() {
     mapName := player.map;
     player.blockIndex := getBlockIndexByName("fighter1");
     loadMap(mapName);
+    gameMessage("You awake underground.", COLOR_YELLOW);
 }
 
 def drawUI() {
     clearVideo();
-    fillRect(5, 5, 5 + TILE_W * MAP_VIEW_W, 5 + TILE_H * MAP_VIEW_H, COLOR_BLACK);
+    drawRect(4, 5, 5 + TILE_W * MAP_VIEW_W, 5 + TILE_H * MAP_VIEW_H, COLOR_DARK_BLUE);
 
     # pc-s
     x := 10 + TILE_W * MAP_VIEW_W;
     y := 5;
-    fillRect(x, y, x + (320 - x - 5), 40, COLOR_BLACK);
+    drawRect(x, y, x + (320 - x - 5), 40, COLOR_DARK_BLUE);
 
     # messages
-    y := 45;
-    fillRect(x, y, x + (320 - x - 5), y + ((5 + TILE_H * MAP_VIEW_H) - y), COLOR_BLACK);    
+    y := y + ((5 + TILE_H * MAP_VIEW_H) - y) - 100;
+    drawRect(x, y, x + (320 - x - 5), y + ((5 + TILE_H * MAP_VIEW_H) - y), COLOR_DARK_BLUE); 
+
+    ty := y + ((5 + TILE_H * MAP_VIEW_H) - y) - 10;
+    i := len(player.messages) - 1;
+    while(i >= 0) {
+         drawText(x + 2, ty + 2, player.messages[i][1], COLOR_BLACK, player.messages[i][0]);
+         i := i - 1;
+         ty := ty - 10;
+    }   
+}
+
+def gameMessage(message, color) {
+    i := 0;
+    while(i < len(message)) {
+        start := i;
+        stop := i;
+        nextSpace := i;
+        while(nextSpace < len(message) && nextSpace - start < 16) {
+            while(nextSpace < len(message) && substr(message, nextSpace, 1) != " ") {
+                nextSpace := nextSpace + 1;
+            }
+            if(nextSpace - start < 16) {
+                stop := nextSpace;
+            }
+            nextSpace := nextSpace + 1;
+        }
+        player.messages[len(player.messages)] := [substr(message, start, stop - start), color];
+        while(len(player.messages) > 10) {
+            del player.messages[0];
+        }
+        i := stop + 1;
+    }
 }
 
 def renderGame() {
@@ -100,11 +139,9 @@ def gameDrawViewAt(x, y, mx, my) {
 def getMapStartPos(nextMapName) {
     m := links[nextMapName];
     k := keys(m);
-    trace("Looking for " + mapName + " in " + m);
     i := 0;
     while(i < len(k)) {
         if(m[k[i]] = mapName) {
-            trace("Start player at: " + k[i]);
             pos := split(k[i], ",");
             return [int(pos[0]), int(pos[1])];
         }
@@ -123,6 +160,12 @@ def gameEnterMap() {
             loadMap(s);
             player.x := pos[0];
             player.y := pos[1];
+            
+            if(MAP_MESSAGES[s] != null) {
+                gameMessage(MAP_MESSAGES[s], COLOR_LIGHT_BLUE);
+            } else {
+                gameMessage("Enter another area.", COLOR_MID_GRAY);
+            }
         }
     }
 }
@@ -148,7 +191,7 @@ def gameUseDoor() {
         block := blocks[getBlock(x, y).block];
         if(block["nextState"] != null) {
             setBlock(x, y, getBlockIndexByName(block.nextState), 0);
-            gameMessage("Use door");
+            gameMessage("Use a door.", COLOR_MID_GRAY);
             return 1;
         } else {
             return null;
@@ -162,16 +205,12 @@ def gameSearch() {
         block := getBlock(x, y).block;
         if(map.secrets["" + x + "," + y] = 1 && block != space) {
             setBlock(x, y, space, 0);
-            gameMessage("Found a secret door!");
+            gameMessage("Found a secret door!", COLOR_MID_GRAY);
             return 1;
         } else {
             return null;
         }
     });
-}
-
-def gameMessage(message) {
-    trace(message);
 }
 
 def gameInput() {

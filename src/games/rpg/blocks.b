@@ -347,4 +347,12 @@ blocks := [
         "blocking": false,
         "color": COLOR_BROWN,
     },
+    {
+        "img": "treesm2",
+        "type": "tree-small-dense",
+        "isEdge": false,
+        "blocking": true,
+        "color": COLOR_TEAL,
+    },
+
 ];
