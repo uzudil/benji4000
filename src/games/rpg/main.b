@@ -29,7 +29,7 @@ def drawView(mx, my) {
 }
 
 def main() {
-    limitFps(30);
+    #limitFps(30);
     setVideoMode(1);
     setBackground(COLOR_BLACK);
 
@@ -42,8 +42,9 @@ def main() {
     MODES[mode].render();
     updateVideo();
     while(true) {
-        handleInput();
-        MODES[mode].render();
+        if(handleInput()) {
+            MODES[mode].render();
+        }
         updateVideo();
     }
 }

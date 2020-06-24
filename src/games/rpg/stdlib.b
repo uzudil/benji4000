@@ -42,10 +42,14 @@ def array_find(array, fx) {
     return -1;
 }
 
-def array_foreach(a, fx) {
+def array_foreach(array, fx) {
     i := 0; 
     while(i < len(array)) {
         fx(i, array[i]);
         i := i + 1;
     }
+}
+
+def choose(array) {
+    return array[random() * len(array)];
 }

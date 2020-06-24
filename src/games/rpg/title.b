@@ -1,13 +1,19 @@
 titleMode := 0;
+savegameFound := null;
 
 def initTitle() {
+    savegameFound := load("savegame.dat");
 }
 
 def renderTitle() {
     clearVideo();
     if(titleMode = 0) {
         drawText(20, 30, COLOR_GREEN, COLOR_BLACK, "The Curse of Svaltfen");
-        drawText(20, 185, COLOR_DARK_GRAY, COLOR_BLACK, "Press SPACE to start");
+        if(savegameFound = null) {
+            drawText(20, 185, COLOR_DARK_GRAY, COLOR_BLACK, "Press SPACE to start");
+        } else {
+            drawText(20, 185, COLOR_DARK_GRAY, COLOR_BLACK, "Press SPACE to continue");
+        }
     }
     if(titleMode = 1) {
         drawText(10, 10, COLOR_MID_GRAY, COLOR_BLACK, "...You see a faint light coming closer.");
@@ -39,7 +45,11 @@ def titleInput() {
         while(isKeyDown(KeySpace)) {
         }
         if(titleMode < 1) {
-            titleMode := titleMode + 1;
+            if(savegameFound = null) {
+                titleMode := titleMode + 1;
+            } else {
+                mode := "game";
+            }
         } else {
             mode := "game";
         }

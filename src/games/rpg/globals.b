@@ -17,6 +17,7 @@ img := null;
 links := {};
 mapName := "world1";
 map := {};
+const events = {};
 minimap := [];
 
 const MODES = {

@@ -4,19 +4,42 @@ player := {
     "map": "bonefell",
     "blockIndex": 0,
     "messages": [],
+    "gameState": {},
+    "blocks": {},
 };
 
-const MAP_MESSAGES = {
-    "almoc": "You arrive in Almoc",
-    "redclaw": "The forest fastness of Redclaw",
-    "bonefell": "Bonefell dungeon",
-};
+npc := [];
 
 def initGame() {
-    mapName := player.map;
+    # init the maps
+    events["almoc"] := events_almoc;
+    events["bonefell"] := events_bonefell;
+    events["redclaw"] := events_redclaw;
+    events["world1"] := events_world1;
+
+    savegame := load("savegame.dat");
+    if(savegame = null) {
+        gameMessage("You awake underground.", COLOR_YELLOW);
+    } else {
+        player := savegame;
+        gameMessage("You continue on your adventure.", COLOR_WHITE);
+    }
     player.blockIndex := getBlockIndexByName("fighter1");
-    loadMap(mapName);
-    gameMessage("You awake underground.", COLOR_YELLOW);
+    player["image"] := img[blocks[player.blockIndex].img];
+    mapName := player.map;
+    gameLoadMap(mapName);
+}
+
+def gameLoadMap(name) {
+    loadMap(name);    
+    applyGameBlocks(name);
+    if(events[name]["onNpcInit"] != null) {
+        npc := events[name].onNpcInit();
+        array_foreach(npc, (i, e) => {
+            e["image"] := img[blocks[getBlockIndexByName(e.block)].img];
+            e["start"] := [e.pos[0], e.pos[1]];
+        });
+    }
 }
 
 def drawUI() {
@@ -67,6 +90,7 @@ def gameMessage(message, color) {
 def renderGame() {
     drawUI();
     initLight();
+    moveNpcs();
     drawView(player.x, player.y);
 }
 
@@ -132,8 +156,33 @@ def gameIsBlockVisible(mx, my) {
 def gameDrawViewAt(x, y, mx, my) {
     block := getBlock(mx, my);
     if(mx = player.x && my = player.y) {
-        drawImage(x, y, img[blocks[player.blockIndex].img], 0);
+        drawImage(x, y, player.image, 0);
     }
+    array_foreach(npc, (i, e) => {
+        if(e.pos[0] = mx && e.pos[1] = my) {
+            drawImage(x, y, e.image, 0);
+        }
+    });
+}
+
+def moveNpcs() {
+    array_foreach(npc, (i, e) => {
+        if(random() > 0.5) {
+            dx := choose([ 1, -1 ]);
+            dy := choose([ 1, -1 ]);
+            e.pos[0] := e.pos[0] + dx;
+            e.pos[1] := e.pos[1] + dy;
+            block := blocks[getBlock(e.pos[0], e.pos[1]).block];
+            if(block.blocking || 
+                abs(e.pos[0] - e.start[0]) > 5 || 
+                abs(e.pos[1] - e.start[1]) > 5 || 
+                (e.pos[0] = player.x && e.pos[1] = player.y)
+            ) {
+                e.pos[0] := e.pos[0] - dx;
+                e.pos[1] := e.pos[1] - dy;
+            }
+        }
+    });
 }
 
 def getMapStartPos(nextMapName) {
@@ -151,18 +200,34 @@ def getMapStartPos(nextMapName) {
     return null;
 }
 
+def applyGameBlocks(newMapName) {
+    # apply map block changes (doors, secrets, etc)
+    m := player.blocks[newMapName];
+    if(m != null) {
+        k := keys(m);
+        i := 0;
+        while(i < len(k)) {
+            pos := split(k[i], ",");
+            setBlock(int(pos[0]), int(pos[1]), m[k[i]], 0);
+            i := i + 1;
+        }
+    }
+}
+
 def gameEnterMap() {
     key := "" + player.x + "," + player.y;
     if(links[mapName] != null) {
         s := links[mapName][key];
         if(s != null) {
             pos := getMapStartPos(s);
-            loadMap(s);
+            gameLoadMap(s);
+
             player.x := pos[0];
             player.y := pos[1];
-            
-            if(MAP_MESSAGES[s] != null) {
-                gameMessage(MAP_MESSAGES[s], COLOR_LIGHT_BLUE);
+            player.map := s;
+            saveGame();
+            if(events[s] != null) {
+                events[s].onEnter();
             } else {
                 gameMessage("Enter another area.", COLOR_MID_GRAY);
             }
@@ -190,7 +255,9 @@ def gameUseDoor() {
     aroundPlayer((x, y) => {
         block := blocks[getBlock(x, y).block];
         if(block["nextState"] != null) {
-            setBlock(x, y, getBlockIndexByName(block.nextState), 0);
+            index := getBlockIndexByName(block.nextState);
+            setBlock(x, y, index, 0);
+            setGameBlock(x, y, index);
             gameMessage("Use a door.", COLOR_MID_GRAY);
             return 1;
         } else {
@@ -205,12 +272,30 @@ def gameSearch() {
         block := getBlock(x, y).block;
         if(map.secrets["" + x + "," + y] = 1 && block != space) {
             setBlock(x, y, space, 0);
+            setGameBlock(x, y, space);
             gameMessage("Found a secret door!", COLOR_MID_GRAY);
             return 1;
         } else {
             return null;
         }
     });
+}
+
+def setGameState(name, value) {
+    player.gameState[name] := value;
+    saveGame();
+}
+
+def setGameBlock(x, y, index) {
+    if(player.blocks[player.map] = null) {
+        player.blocks[player.map] := {};
+    }
+    player.blocks[player.map]["" + x + "," + y] := index;
+    saveGame();
+}
+
+def saveGame() {
+    save("savegame.dat", player);
 }
 
 def gameInput() {
