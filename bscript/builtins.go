@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -151,7 +152,8 @@ func split(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("argument 2 should be a string")
 	}
-	a := strings.Split(s, d)
+	// a := strings.Split(s, d)
+	a := regexp.MustCompile(d).Split(s, -1)
 	arr := make([]interface{}, len(a))
 	for i, aa := range a {
 		arr[i] = aa

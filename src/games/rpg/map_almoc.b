@@ -16,4 +16,16 @@ const events_almoc = {
             { "name": "Vinkh", "block": "woman2", "pos": [22, 21] },
         ];
     },
+    "onConvo": (self, n) => {
+        if(n.name = "Arnel") {
+            return {
+                "": "Can I $help you stranger?",
+                "help": "You are in Almoc. We have a $supplies store, an $inn and an $armorer.",
+                "supplies": "Snael's wares are southeast of here. Anything $else|help?",
+                "inn": "Aye, the Inn of the Rose to the east. Anything $else|help?",
+                "armorer": "Tools for violence can be found at Ragh's, near the town center. Anything $else|help?",
+            };
+        }
+        return null;
+    },
 };

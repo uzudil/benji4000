@@ -10,6 +10,19 @@ player := {
 
 npc := [];
 
+const MOVE = 1;
+const CONVO = 2;
+const TRADE = 3;
+const COMBAT = 4;
+gameMode := MOVE;
+
+convo := {
+    "npc": null,
+    "map": null,
+    "key": null,
+    "answers": [],
+};
+
 def initGame() {
     # init the maps
     events["almoc"] := events_almoc;
@@ -39,6 +52,8 @@ def gameLoadMap(name) {
             e["image"] := img[blocks[getBlockIndexByName(e.block)].img];
             e["start"] := [e.pos[0], e.pos[1]];
         });
+    } else {
+        npc := [];
     }
 }
 
@@ -53,7 +68,11 @@ def drawUI() {
 
     # messages
     y := y + ((5 + TILE_H * MAP_VIEW_H) - y) - 100;
-    drawRect(x, y, x + (320 - x - 5), y + ((5 + TILE_H * MAP_VIEW_H) - y), COLOR_DARK_BLUE); 
+    color := COLOR_DARK_BLUE;
+    if(gameMode = CONVO) {
+        color := COLOR_TEAL;
+    }
+    drawRect(x, y, x + (320 - x - 5), y + ((5 + TILE_H * MAP_VIEW_H) - y), color); 
 
     ty := y + ((5 + TILE_H * MAP_VIEW_H) - y) - 10;
     i := len(player.messages) - 1;
@@ -90,8 +109,10 @@ def gameMessage(message, color) {
 def renderGame() {
     drawUI();
     initLight();
-    moveNpcs();
-    drawView(player.x, player.y);
+    if(gameMode = MOVE) {        
+        moveNpcs();
+    }
+    drawView(player.x, player.y);    
 }
 
 def initLight() {
@@ -219,15 +240,22 @@ def gameEnterMap() {
     if(links[mapName] != null) {
         s := links[mapName][key];
         if(s != null) {
-            pos := getMapStartPos(s);
-            gameLoadMap(s);
-
-            player.x := pos[0];
-            player.y := pos[1];
-            player.map := s;
+            ss := split(s, ",");
+            if(len(ss) > 1) {
+                gameLoadMap(ss[0]);
+                player.map := ss[0];
+                player.x := int(ss[1]);
+                player.y := int(ss[2]);
+            } else {
+                pos := getMapStartPos(s);
+                gameLoadMap(s);
+                player.x := pos[0];
+                player.y := pos[1];
+                player.map := s;
+            }            
             saveGame();
-            if(events[s] != null) {
-                events[s].onEnter();
+            if(events[mapName] != null) {
+                events[mapName].onEnter();
             } else {
                 gameMessage("Enter another area.", COLOR_MID_GRAY);
             }
@@ -281,6 +309,61 @@ def gameSearch() {
     });
 }
 
+def gameConvo() {
+    aroundPlayer((x, y) => {
+        n := array_find(npc, e => e.pos[0] = x && e.pos[1] = y);
+        if(n != null && events[mapName]["onConvo"] != null) {
+            convo := events[mapName].onConvo(n);
+            if(convo != null) {
+                startConvo(n, convo);
+                return 1;
+            }
+        }
+        return null;
+    });
+}
+
+def startConvo(theNpc, theConvoMap) {
+    gameMode := CONVO;
+    convo.npc := theNpc;
+    convo.map := theConvoMap;
+    convo.key := "";
+
+    gameMessage("Talking to " + theNpc.name, COLOR_GREEN);
+    showConvoText();
+}
+
+def showConvoText() {
+    result := {
+        "words": "",
+        "answers": [ [ "Bye", "bye" ] ],
+    };
+    array_foreach(split(convo.map[convo.key], " "), (i, s) => {
+        if(len(result.words) > 0) {
+            result.words := result.words + " ";
+        }
+        if(substr(s, 0, 1) = "$") {
+            # remove trailing punctuation
+            w := split(s, "[.,!?:;]");
+            ss := split(substr(w[0], 1), "\\|");
+            if(len(ss) > 1) {
+                result.answers[len(result.answers)] := [ ss[0], ss[1] ];
+            } else {
+                result.answers[len(result.answers)] := [ ss[0], ss[0] ];
+            }
+            result.words := result.words + ss[0];
+
+            # add the punctuation
+            result.words := result.words + substr(s, len(w[0]));
+        } else {
+            result.words := result.words + s;
+        }
+    });
+    gameMessage(result.words, COLOR_MID_GRAY);
+    array_foreach(result.answers, (i, s) => gameMessage("" + (i + 1) + ": " + s[0], COLOR_WHITE));
+    convo.answers := result.answers;
+}
+
 def setGameState(name, value) {
     player.gameState[name] := value;
     saveGame();
@@ -299,30 +382,75 @@ def saveGame() {
 }
 
 def gameInput() {
-    ox := player.x;
-    oy := player.y;
-    if(isKeyDown(KeySpace)) {
-        while(isKeyDown(KeySpace)) {
+    if(gameMode = MOVE) {
+        ox := player.x;
+        oy := player.y;
+        if(isKeyDown(KeySpace)) {
+            while(isKeyDown(KeySpace)) {
+            }
+            gameEnterMap();
+            gameUseDoor();
+            gameSearch();
+            gameConvo();
         }
-        gameEnterMap();
-        gameUseDoor();
-        gameSearch();
+        if(isKeyDown(KeyUp)) {
+            player.y := player.y - 1;
+        }
+        if(isKeyDown(KeyDown)) {
+            player.y := player.y + 1;
+        }
+        if(isKeyDown(KeyLeft)) {
+            player.x := player.x - 1;
+        }
+        if(isKeyDown(KeyRight)) {
+            player.x := player.x + 1;
+        }
+        block := blocks[getBlock(player.x, player.y).block];
+        if(block.blocking || player.x < 0 || player.y < 0 || player.x >= map.width || player.y >= map.height) {
+            player.x := ox;
+            player.y := oy;
+        } else {
+            # if stepping on an npc, swap places
+            n := array_find(npc, e => e.pos[0] = player.x && e.pos[1] = player.y);
+            if(n != null) {
+                n.pos[0] := ox;
+                n.pos[1] := oy;
+            }    
+        }
     }
-    if(isKeyDown(KeyUp)) {
-        player.y := player.y - 1;
-    }
-    if(isKeyDown(KeyDown)) {
-        player.y := player.y + 1;
-    }
-    if(isKeyDown(KeyLeft)) {
-        player.x := player.x - 1;
-    }
-    if(isKeyDown(KeyRight)) {
-        player.x := player.x + 1;
-    }
-    block := blocks[getBlock(player.x, player.y).block];
-    if(block.blocking || player.x < 0 || player.y < 0 || player.x >= map.width || player.y >= map.height) {
-        player.x := ox;
-        player.y := oy;
+
+    if(gameMode = CONVO) {
+        index := null;
+        if(isKeyDown(Key1) || isKeyDown(KeyEscape)) {
+            while(anyKeyDown()) {}
+            index := 0;
+        }
+        if(isKeyDown(Key2)) {
+            while(anyKeyDown()) {}
+            index := 1;
+        }
+        if(isKeyDown(Key3)) {
+            while(anyKeyDown()) {}
+            index := 2;
+        }
+        if(isKeyDown(Key4)) {
+            while(anyKeyDown()) {}
+            index := 3;
+        }
+        if(isKeyDown(Key5)) {
+            while(anyKeyDown()) {}
+            index := 4;
+        }
+        if(index != null) {
+            if(index = 0) {
+                gameMode := MOVE;
+                gameMessage("Bye.", COLOR_MID_GRAY);
+            } else {
+                if(len(convo.answers) > index) {
+                    convo.key := convo.answers[index][1];
+                    showConvoText();
+                }
+            }
+        }
     }
 }

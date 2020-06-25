@@ -39,7 +39,7 @@ def array_find(array, fx) {
         }
         i := i + 1;
     }
-    return -1;
+    return null;
 }
 
 def array_foreach(array, fx) {

@@ -18,9 +18,16 @@ def editorEnterMap() {
     if(links[mapName] != null) {
         s := links[mapName][key];
         if(s != null) {
-            loadMap(s);
-            editor.x := int(map.width/2);
-            editor.y := int(map.height/2);
+            ss := split(s, ",");
+            if(len(ss) > 1) {
+                loadMap(ss[0]);
+                editor.x := int(ss[1]);
+                editor.y := int(ss[2]);
+            } else {
+                loadMap(s);
+                editor.x := int(map.width/2);
+                editor.y := int(map.height/2);
+            }
         }
     }
 }
@@ -35,8 +42,9 @@ def addLink() {
     }
     setVideoMode(0);
     name := input("New map name:");
+    pos := input("New pos (x,y):");
     key := "" + editor.x + "," + editor.y;
-    links[mapName][key] := name;
+    links[mapName][key] := name + "," + pos;
     save("links", links);
     saveMap();
     loadMap(name);

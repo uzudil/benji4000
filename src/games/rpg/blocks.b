@@ -403,5 +403,26 @@ blocks := [
         "blocking": true,
         "color": COLOR_LIGHT_GRAY,
     },
+    {
+        "img": "wood1",
+        "type": "wood1",
+        "isEdge": false,
+        "blocking": true,
+        "color": COLOR_BROWN,
+    },
+    {
+        "img": "robes",
+        "type": "robes1",
+        "isEdge": false,
+        "blocking": true,
+        "color": COLOR_BROWN,
+    },
+    {
+        "img": "robes2",
+        "type": "robes2",
+        "isEdge": false,
+        "blocking": true,
+        "color": COLOR_BROWN,
+    },
 
 ];
