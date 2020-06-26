@@ -146,11 +146,11 @@ func length(ctx *Context, arg ...interface{}) (interface{}, error) {
 func split(ctx *Context, arg ...interface{}) (interface{}, error) {
 	s, ok := arg[0].(string)
 	if !ok {
-		return nil, fmt.Errorf("argument 1 should be a string")
+		return nil, fmt.Errorf("%s argument 1 should be a string", ctx.Pos)
 	}
 	d, ok := arg[1].(string)
 	if !ok {
-		return nil, fmt.Errorf("argument 2 should be a string")
+		return nil, fmt.Errorf("%s argument 2 should be a string", ctx.Pos)
 	}
 	// a := strings.Split(s, d)
 	a := regexp.MustCompile(d).Split(s, -1)
@@ -164,17 +164,17 @@ func split(ctx *Context, arg ...interface{}) (interface{}, error) {
 func substr(ctx *Context, arg ...interface{}) (interface{}, error) {
 	s, ok := arg[0].(string)
 	if !ok {
-		return nil, fmt.Errorf("argument 1 to substr() should be a string")
+		return nil, fmt.Errorf("%s argument 1 to substr() should be a string", ctx.Pos)
 	}
 	index, ok := arg[1].(float64)
 	if !ok {
-		return nil, fmt.Errorf("argument 2 to substr() should be a number")
+		return nil, fmt.Errorf("%s argument 2 to substr() should be a number", ctx.Pos)
 	}
 	length := len(s)
 	if len(arg) > 2 {
 		f, ok := arg[2].(float64)
 		if !ok {
-			return nil, fmt.Errorf("argument 3 to substr() should be a number")
+			return nil, fmt.Errorf("%s argument 3 to substr() should be a number", ctx.Pos)
 		}
 		length = int(f)
 	}
@@ -811,6 +811,37 @@ func playSound(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, ctx.Sound.Play(int(playerIndex), freq, duration)
 }
 
+func typeof(ctx *Context, arg ...interface{}) (interface{}, error) {
+	if arg[0] == nil {
+		return "null", nil
+	}
+	_, ok := arg[0].(float64)
+	if ok {
+		return "number", nil
+	}
+	_, ok = arg[0].(string)
+	if ok {
+		return "string", nil
+	}
+	_, ok = arg[0].(bool)
+	if ok {
+		return "boolean", nil
+	}
+	_, ok = arg[0].(*Closure)
+	if ok {
+		return "function", nil
+	}
+	_, ok = arg[0].(map[string]interface{})
+	if ok {
+		return "map", nil
+	}
+	_, ok = arg[0].(*[]interface{})
+	if ok {
+		return "array", nil
+	}
+	return nil, fmt.Errorf("%s Unknown variable type", ctx.Pos)
+}
+
 func assert(ctx *Context, arg ...interface{}) (interface{}, error) {
 	a := arg[0]
 	b := arg[1]
@@ -934,6 +965,7 @@ func Builtins() map[string]Builtin {
 		"clearSound":           clearSound,
 		"limitFps":             limitFps,
 		"sleep":                sleep,
+		"typeof":               typeof,
 	}
 }
 

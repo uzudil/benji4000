@@ -53,3 +53,24 @@ def array_foreach(array, fx) {
 def choose(array) {
     return array[random() * len(array)];
 }
+
+def drawColoredText(x, y, fg, bg, text) {
+    words := split(text, " ");
+    wi := 0;
+    xx := 0;
+    while(wi < len(words)) {
+        color := fg;
+        word := words[wi];            
+        if(wi > 0) {
+            xx := xx + 8;
+        }
+        parts := split(word, "_");
+        if(len(parts) > 1) {
+            word := parts[2];
+            color := int(parts[1]);
+        }
+        drawText(x + xx, y, color, COLOR_BLACK, word);
+        wi := wi + 1;
+        xx := xx + len(word) * 8;
+    }
+}
