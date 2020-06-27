@@ -440,6 +440,22 @@ func toAbs(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return math.Abs(n), nil
 }
 
+func toMax(ctx *Context, arg ...interface{}) (interface{}, error) {
+	f, err := floatArgs(ctx, 2, arg)
+	if err != nil {
+		return nil, err
+	}
+	return math.Max(f[0], f[1]), nil
+}
+
+func toMin(ctx *Context, arg ...interface{}) (interface{}, error) {
+	f, err := floatArgs(ctx, 2, arg)
+	if err != nil {
+		return nil, err
+	}
+	return math.Min(f[0], f[1]), nil
+}
+
 func toInt(ctx *Context, arg ...interface{}) (interface{}, error) {
 	n, ok := arg[0].(float64)
 	if !ok {
@@ -936,6 +952,8 @@ func Builtins() map[string]Builtin {
 		"int":                  toInt,
 		"round":                toRound,
 		"abs":                  toAbs,
+		"min":                  toMin,
+		"max":                  toMax,
 		"getFont":              getFont,
 		"setFont":              setFont,
 		"getColor":             getColor,

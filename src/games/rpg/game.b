@@ -11,14 +11,18 @@ player := {
     "coins": 10,
 };
 
+const LIGHT_RADIUS = 15;
+
 npc := [];
 
 const MOVE = 1;
 const CONVO = 2;
 const TRADE = 3;
 const COMBAT = 4;
+const MESSAGE_PAUSE = 5;
 gameMode := MOVE;
 tradeMode := null;
+moreText := false;
 
 convo := {
     "npc": null,
@@ -38,9 +42,10 @@ def initGame() {
 
     savegame := load("savegame.dat");
     if(savegame = null) {
-        gameMessage("You awake underground.", COLOR_YELLOW);
+        gameMessage("You awake underground surrounded by damp earth and old bones. Press H any time for help.", COLOR_YELLOW);
     } else {
         player := savegame;
+        player.messages := [];
         gameMessage("You continue on your adventure.", COLOR_WHITE);
     }
     player.blockIndex := getBlockIndexByName("fighter1");
@@ -70,7 +75,7 @@ def gameLoadMap(name) {
                     }
                     inv := player.traders[name][e.name];
                     while(len(inv) < 5) {
-                        inv[len(inv)] := getRandomItem(trade);
+                        inv[len(inv)] := itemInstance(getRandomItem(trade));
                     }
                 }
             }
@@ -105,15 +110,7 @@ def drawUI() {
     # messages
     y := message_y;
     drawRect(x, y, x + (320 - x - 5), y + ((5 + TILE_H * MAP_VIEW_H) - y), color); 
-
-    ty := y + ((5 + TILE_H * MAP_VIEW_H) - y) - 10;
-    i := len(player.messages) - 1;
-    while(i >= 0) {
-        drawColoredText(x + 2, ty + 2, player.messages[i][1], COLOR_BLACK, player.messages[i][0]);
-         #drawText(x + 2, ty + 2, player.messages[i][1], COLOR_BLACK, player.messages[i][0]);
-         i := i - 1;
-         ty := ty - 10;
-    }   
+    drawGameMessages(x, message_y + 90);
 
     # trading
     if(gameMode = CONVO) {        
@@ -121,7 +118,8 @@ def drawUI() {
             drawText(10, 10, COLOR_WHITE, COLOR_BLACK, "Inventory of " + convo.npc.name);
             drawColoredText(10, 25, COLOR_MID_GRAY, COLOR_BLACK, "_7_1 Leave store");
             array_foreach(player.traders[mapName][convo.npc.name], (i, item) => {
-                drawColoredText(10, 35 + i * 10, COLOR_MID_GRAY, COLOR_BLACK, "_7_" + (i + 2) + " " + item.name + " " + "$" + item.price);
+                drawColoredText(10, 35 + i * 10, COLOR_MID_GRAY, COLOR_BLACK, 
+                    "_7_" + (i + 2) + " " + item.name + " " + "$" + ITEMS_BY_NAME[item.name].price);
             });
             
         }
@@ -129,32 +127,10 @@ def drawUI() {
             drawText(10, 10, COLOR_WHITE, COLOR_BLACK, "Party Inventory");
             drawColoredText(10, 25, COLOR_MID_GRAY, COLOR_BLACK, "_7_1 Leave store");
             array_foreach(player.inventory, (i, item) => {
-                drawColoredText(10, 35 + i * 10, COLOR_MID_GRAY, COLOR_BLACK, "_7_" + (i + 2) + " " + item.name + " " + "$" + item.price);
+                drawColoredText(10, 35 + i * 10, COLOR_MID_GRAY, COLOR_BLACK, 
+                    "_7_" + (i + 2) + " " + item.name + " " + "$" + ITEMS_BY_NAME[item.name].sellPrice);
             });
         }
-    }
-}
-
-def gameMessage(message, color) {
-    i := 0;
-    while(i < len(message)) {
-        start := i;
-        stop := i;
-        nextSpace := i;
-        while(nextSpace < len(message) && nextSpace - start < 16) {
-            while(nextSpace < len(message) && substr(message, nextSpace, 1) != " ") {
-                nextSpace := nextSpace + 1;
-            }
-            if(nextSpace - start < 16) {
-                stop := nextSpace;
-            }
-            nextSpace := nextSpace + 1;
-        }
-        player.messages[len(player.messages)] := [substr(message, start, stop - start), color];
-        while(len(player.messages) > 10) {
-            del player.messages[0];
-        }
-        i := stop + 1;
     }
 }
 
@@ -170,10 +146,10 @@ def renderGame() {
 }
 
 def initLight() {
-    mx := player.x - 5; 
-    while(mx <= player.x + 5) {
-        my := player.y - 5;
-        while(my <= player.y + 5) {
+    mx := player.x - LIGHT_RADIUS; 
+    while(mx <= player.x + LIGHT_RADIUS) {
+        my := player.y - LIGHT_RADIUS;
+        while(my <= player.y + LIGHT_RADIUS) {
             block := getBlock(mx, my);
             if(player.x = mx && player.y = my) {
                 block["light"] := 1;
@@ -190,7 +166,7 @@ def initLight() {
 def findLight(mx, my) {
     dx := mx - player.x;
     dy := my - player.y;
-    if(abs(dx) <= 5 && abs(dy) <= 5) {
+    if(abs(dx) <= LIGHT_RADIUS && abs(dy) <= LIGHT_RADIUS) {
         block := getBlock(mx, my);
         block.light := 1;
         if(blocks[block.block].blocking = false) {
@@ -383,6 +359,7 @@ def startConvo(theNpc, theConvoMap) {
     convo.map := theConvoMap;
     convo.key := "";
 
+    clearGameMessages();
     gameMessage("Talking to " + theNpc.name, COLOR_GREEN);
     showConvoText();
 }
@@ -457,17 +434,43 @@ def saveGame() {
     save("savegame.dat", player);
 }
 
+def showGameHelp() {
+    gameMessage("_1_Arrows: movement", COLOR_MID_GRAY);
+    gameMessage("_1_H: help", COLOR_MID_GRAY);
+    gameMessage("_1_S: speak", COLOR_MID_GRAY);
+    gameMessage("_1_Space: search/use door", COLOR_MID_GRAY);
+    gameMessage("_1_Enter: use stairs/gate", COLOR_MID_GRAY);
+    gameMessage("_1_Numbers: option in conversation or trade", COLOR_MID_GRAY);
+}
+
 def gameInput() {
+    if(isKeyDown(KeyH)) {
+        while(anyKeyDown()) {}
+        showGameHelp();
+    }
+
+    if(moreText && isKeyDown(KeySpace)) {
+        while(anyKeyDown()) {}
+        pageGameMessages();
+    }
     if(gameMode = MOVE) {
         ox := player.x;
         oy := player.y;
-        if(isKeyDown(KeySpace)) {
+        if(isKeyDown(KeyEnter)) {
             while(isKeyDown(KeySpace)) {
             }
             gameEnterMap();
+        }
+        if(isKeyDown(KeyT)) {
+            while(isKeyDown(KeySpace)) {
+            }
+            gameConvo();
+        }
+        if(isKeyDown(KeySpace)) {
+            while(isKeyDown(KeySpace)) {
+            }
             gameUseDoor();
             gameSearch();
-            gameConvo();
         }
         if(isKeyDown(KeyUp)) {
             player.y := player.y - 1;
@@ -536,6 +539,7 @@ def gameInput() {
                 if(tradeMode = null) {
                     if(len(convo.answers) > index) {
                         convo.key := convo.answers[index][1];
+                        clearGameMessages();
                         showConvoText();
                     }
                 }
@@ -547,11 +551,11 @@ def gameInput() {
 def buyItem(index) {
     inv := player.traders[mapName][convo.npc.name];
     if(index < len(inv)) {
-        item := inv[index];
+        item := ITEMS_BY_NAME[inv[index].name];
         if(player.coins >= item.price) {
             gameMessage("You bought " + item.name + " for $" + item.price + ".", COLOR_GREEN);
             player.coins := player.coins - item.price;
-            player.inventory[len(player.inventory)] := item;
+            player.inventory[len(player.inventory)] := itemInstance(item);
             del inv[index];
             saveGame();
         } else {
@@ -565,9 +569,9 @@ def buyItem(index) {
 def sellItem(index) {
     # todo: only show items of certain type
     if(index < len(player.inventory)) {
-        item := player.inventory[index];
-        gameMessage("You sold " + item.name + " for $" + item.price + ".", COLOR_GREEN);
-        player.coins := player.coins + item.price;
+        item := itemInstance(player.inventory[index].name);
+        gameMessage("You sold " + item.name + " for $" + item.sellPrice + ".", COLOR_GREEN);
+        player.coins := player.coins + item.sellPrice;
         del player.inventory[index];
         saveGame();
     } else {

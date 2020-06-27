@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/uzudil/benji4000/bscript"
@@ -32,10 +31,7 @@ func main() {
 
 	if source != "" {
 		go func() {
-			_, err := bscript.Run(source, showAst, nil, video, sound)
-			if err != nil {
-				fmt.Printf("Error: %v\n", err)
-			}
+			bscript.Run(source, showAst, nil, video, sound)
 			os.Exit(0)
 		}()
 	} else {

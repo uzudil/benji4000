@@ -370,6 +370,15 @@ func (e *Expression) Evaluate(ctx *Context) (interface{}, error) {
 	return lhs, nil
 }
 
+func (ctx *Context) printStack() {
+	fmt.Println("Runtime Call Stack:")
+	indent := "  "
+	for _, runtime := range ctx.RuntimeStack {
+		fmt.Println(fmt.Sprintf("%s%s at %s Vars=%s\n", indent, runtime.Function, runtime.Pos, runtime.Vars))
+		indent = indent + "  "
+	}
+}
+
 func (ctx *Context) debug(message string) {
 	fmt.Println(message)
 	indent := "  "
@@ -386,12 +395,7 @@ func (ctx *Context) debug(message string) {
 		indent = indent + "  "
 	}
 	fmt.Println("------------------------------------")
-	fmt.Println("Runtime Call Stack:")
-	indent = "  "
-	for _, runtime := range ctx.RuntimeStack {
-		fmt.Println(fmt.Sprintf("%s%s at %s Vars=%s\n", indent, runtime.Function, runtime.Pos, runtime.Vars))
-		indent = indent + "  "
-	}
+	ctx.printStack()
 	fmt.Println("------------------------------------")
 	fmt.Println(fmt.Sprintf("Currently: %s\n", ctx.Pos))
 }
@@ -833,7 +837,12 @@ func Run(source string, showAst *bool, ctx *Context, video *gfx.Gfx, sound *soun
 	ctx.Video = video
 	ctx.Sound = sound
 
-	return ast.Evaluate(ctx)
+	value, err := ast.Evaluate(ctx)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		ctx.printStack()
+	}
+	return value, err
 }
 
 func (program *Program) init(ctx *Context, source string) (*Context, error) {

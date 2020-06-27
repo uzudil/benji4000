@@ -28,7 +28,7 @@ const events_almoc = {
         }
         if(n.name = "Snael") {
             return {
-                "": "I $sell|_trade_ food and draughts. Prices are reasonable and quite final.",
+                "": "I $trade|_trade_ in food and draughts. Prices are reasonable and quite final.",
             };
         }
         if(n.name = "Vinkh") {
@@ -45,7 +45,7 @@ const events_almoc = {
                 "hungry": "We all hunger for something, $amirite?!",
                 "amirite": "I'll tell you a $rumor|rumors for a $morsel.",
                 "morsel": () => {
-                    food := array_find_index(player.inventory, item => item.type = OBJECT_FOOD);
+                    food := array_find_index(player.inventory, item => ITEMS_BY_NAME[item.name].type = OBJECT_FOOD);
                     if(food > -1) {
                         gameMessage("You give Malde " + player.inventory[food].name + ".", COLOR_GREEN);
                         del player.inventory[food];

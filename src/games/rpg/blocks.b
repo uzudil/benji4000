@@ -473,5 +473,26 @@ blocks := [
         "blocking": true,
         "color": COLOR_BROWN,
     },
+    {
+        "img": "fire",
+        "type": "fire",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_BROWN,
+    },
+    {
+        "img": "bones",
+        "type": "bones",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_BROWN,
+    },
+    {
+        "img": "bones2",
+        "type": "bones",
+        "isEdge": false,
+        "blocking": false,
+        "color": COLOR_BROWN,
+    },
 
 ];

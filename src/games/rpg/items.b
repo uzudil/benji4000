@@ -118,17 +118,28 @@ const ITEMS = [
 ];
 
 ITEMS_BY_TYPE := {};
+ITEMS_BY_NAME := {};
 
 def initItems() {
     array_foreach(ITEMS, (index, item) => {
+        item["sellPrice"] := max(int(item.price * 0.75), 1);
         if(ITEMS_BY_TYPE[item.type] = null) {
             ITEMS_BY_TYPE[item.type] := [];
         }
         ITEMS_BY_TYPE[item.type][len(ITEMS_BY_TYPE[item.type])] := item;
+        ITEMS_BY_NAME[item.name] := item;
     });
 }
 
 def getRandomItem(types) {
     type := choose(types);
     return choose(ITEMS_BY_TYPE[type]);
+}
+
+def itemInstance(item) {
+    return {
+        "name": item.name,
+        "quality": 100,
+        "uses": 0,
+    };
 }
