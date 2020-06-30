@@ -39,7 +39,7 @@ def pageGameMessages() {
 }
 
 def gameMessage(message, color) {
-    if(moreText = false) {
+    if(player.messagePaging = false || moreText = false) {
         while(len(player.messages) > MESSAGES_SIZE - 1) {
             del player.messages[0];
         }
@@ -51,7 +51,7 @@ def gameMessage(message, color) {
         player.messages[len(player.messages)] := [lines[t], color];
         t := t + 1;
     }
-    moreText := len(player.messages) > MESSAGES_SIZE;
+    moreText := player.messagePaging && len(player.messages) > MESSAGES_SIZE;
 }
 
 def drawGameMessages(x, y) {
@@ -72,4 +72,8 @@ def drawGameMessages(x, y) {
 def clearGameMessages() {
     player.messages := [];
     moreText := false;
+}
+
+def gameMessageLong(enabled) {
+    player.messagePaging := enabled;
 }

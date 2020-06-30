@@ -36,6 +36,25 @@ def addSecretDoor() {
     map.secrets["" + editor.x + "," + editor.y] := 1;
 }
 
+def addNpc() {
+    if(map["npc"] = null) {
+        map["npc"] := [];
+    }
+    setVideoMode(0);
+    name := input("NPC name:");
+    map.npc[len(map.npc)] := { "name": name, "block": editor.blockIndex, "pos": [ editor.x, editor.y ] };
+    saveMap();
+    setVideoMode(1);
+}
+
+def addMonster() {
+    if(map["monster"] = null) {
+        map["monster"] := [];
+    }
+    map.monster[len(map.monster)] := { "block": editor.blockIndex, "pos": [ editor.x, editor.y ] };
+    saveMap();
+}
+
 def addLink() {
     if(links[mapName] = null) {
         links[mapName] := {};
@@ -76,6 +95,14 @@ def delLink() {
     }
     if(map.secrets[key] != null) {
         del map.secrets[key];
+    }
+    npcIndex := array_find_index(map.npc, e => e.pos[0] = editor.x && e.pos[1] = editor.y);
+    if(npcIndex > -1) {
+        del map.npc[npcIndex];
+    }
+    monsterIndex := array_find_index(map.monster, e => e.pos[0] = editor.x && e.pos[1] = editor.y);
+    if(monsterIndex > -1) {
+        del map.monster[monsterIndex];
     }
 }
 
@@ -152,6 +179,16 @@ def editorDrawViewAt(x, y, mx, my) {
     if(map.secrets[key] = 1) {
         drawRect(x + 1, y + 1, x + TILE_W - 2, y + TILE_H - 2, COLOR_LIGHT_BLUE);
     }
+    array_foreach(map.npc, (i, e) => {
+        if(e.pos[0] = mx && e.pos[1] = my) {
+            drawImage(x, y, img[blocks[e.block].img], 0);
+        }
+    });
+    array_foreach(map.monster, (i, e) => {
+        if(e.pos[0] = mx && e.pos[1] = my) {
+            drawImage(x, y, img[blocks[e.block].img], 0);
+        }
+    });
 }
 
 def handleEditorInput() {
@@ -174,7 +211,17 @@ def handleEditorInput() {
         while(isKeyDown(KeyD)) {
         }
         delLink();
-    }    
+    }
+    if(isKeyDown(KeyN)) {
+        while(isKeyDown(KeyN)) {
+        }
+        addNpc();
+    }
+    if(isKeyDown(KeyZ)) {
+        while(isKeyDown(KeyZ)) {
+        }
+        addMonster();
+    }
     if(isKeyDown(KeyM)) {
         while(isKeyDown(KeyM)) {
         }
@@ -261,10 +308,12 @@ def handleEditorInput() {
         print("S - Save map");
         print("A - Add link");
         print("C - Add secret door");
-        print("D - Delete link/secret door");
+        print("D - Delete link/secret door/npc/etc");
         print("Enter - Load linked map");
         print("[,] - change tile");
         print("M - toggle map");
+        print("N - add NPC");
+        print("Z - add monster");
         print("Press any key");
         while(anyKeyDown() = false) {
         }

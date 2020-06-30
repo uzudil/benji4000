@@ -44,14 +44,16 @@ def titleInput() {
     if(isKeyDown(KeySpace)) {
         while(isKeyDown(KeySpace)) {
         }
-        if(titleMode < 1) {
-            if(savegameFound = null) {
-                titleMode := titleMode + 1;
-            } else {
-                mode := "game";
-            }
-        } else {
+        titleMode := titleMode + 1;
+        if(savegameFound != null || titleMode > 1) {
             mode := "game";
+        } else {
+            if(titleMode = 1) {
+                setVideoMode(0);
+                print("By what name will you be known?");
+                playerName := input("Name: ");
+                setVideoMode(1);
+            }
         }
     }
     if(mode != "title") {

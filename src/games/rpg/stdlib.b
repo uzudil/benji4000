@@ -74,3 +74,26 @@ def drawColoredText(x, y, fg, bg, text) {
         xx := xx + len(word) * 8;
     }
 }
+
+def roll(minValue, maxValue) {
+    return int(random() * (maxValue - minValue)) + minValue;
+}
+
+# todo: make this more efficient
+def sort(array, fx) {
+    trace("sort before: " + array);
+    i := 0;
+    while(i < len(array)) {
+        t := 0;
+        while(t < len(array)) {
+            if(fx(array[i], array[t]) < 0) {
+                tmp := array[i];
+                array[i] := array[t];
+                array[t] := tmp;
+            }
+            t := t + 1;
+        }
+        i := i + 1;
+    }
+    trace("sort after: " + array);
+}

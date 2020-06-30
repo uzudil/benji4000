@@ -1,3 +1,4 @@
+playerName := "Anonymous";
 player := {
     "x": 18,
     "y": 4,
@@ -9,17 +10,18 @@ player := {
     "traders": {},
     "inventory": [],
     "coins": 10,
+    "messagePaging": false,
+    "monster": {},
+    "party": [],
+    "partyIndex": 0,
 };
 
 const LIGHT_RADIUS = 15;
-
-npc := [];
 
 const MOVE = 1;
 const CONVO = 2;
 const TRADE = 3;
 const COMBAT = 4;
-const MESSAGE_PAUSE = 5;
 gameMode := MOVE;
 tradeMode := null;
 moreText := false;
@@ -43,6 +45,11 @@ def initGame() {
     savegame := load("savegame.dat");
     if(savegame = null) {
         gameMessage("You awake underground surrounded by damp earth and old bones. Press H any time for help.", COLOR_YELLOW);
+        player.party[len(player.party)] := {
+            "name": playerName,
+            "hp": 10,
+            "image": img[blocks[getBlockIndexByName("fighter1")].img],
+        };
     } else {
         player := savegame;
         player.messages := [];
@@ -57,33 +64,44 @@ def initGame() {
 def gameLoadMap(name) {
     loadMap(name);    
     applyGameBlocks(name);
-    if(events[name]["onNpcInit"] != null) {
-        npc := events[name].onNpcInit();
-        array_foreach(npc, (i, e) => {
-            e["image"] := img[blocks[getBlockIndexByName(e.block)].img];
-            e["start"] := [e.pos[0], e.pos[1]];
+    array_foreach(map.monster, (i, e) => {
+        e["image"] := img[blocks[e.block].img];
+        e["start"] := [e.pos[0], e.pos[1]];
 
-            # init trade
-            if(player.traders[name] = null) {
-                player.traders[name] := {};
-            }
-            if(events[name]["onTrade"] != null) {
-                trade := events[name].onTrade(e);
-                if(trade != null) {
-                    if(player.traders[name][e.name] = null) {
-                        player.traders[name][e.name] := [];
-                    }
-                    inv := player.traders[name][e.name];
-                    while(len(inv) < 5) {
-                        inv[len(inv)] := itemInstance(getRandomItem(trade));
-                    }
+        if(player.monster[name] = null) {
+            player.monster[name] := [];
+        }
+        idx := array_find_index(player.monster[name], m => m.start[0] = e.start[0] && m.start[1] = e.start[1]);
+        if(idx > -1) {
+            e["hp"] := player.monster[name][idx].hp;
+            e["pos"] := player.monster[name][idx].pos;
+        } else {
+            monster_template := array_find(MONSTERS, m => m.block = blocks[e.block].img);
+            e["hp"] := roll(monster_template.startHp[0], monster_template.startHp[1]);
+        }
+    });
+    array_foreach(map.npc, (i, e) => {
+        e["image"] := img[blocks[e.block].img];
+        e["start"] := [e.pos[0], e.pos[1]];
+
+        # init trade
+        if(player.traders[name] = null) {
+            player.traders[name] := {};
+        }
+        if(events[name]["onTrade"] != null) {
+            trade := events[name].onTrade(e);
+            if(trade != null) {
+                if(player.traders[name][e.name] = null) {
+                    player.traders[name][e.name] := [];
+                }
+                inv := player.traders[name][e.name];
+                while(len(inv) < 5) {
+                    inv[len(inv)] := itemInstance(getRandomItem(trade));
                 }
             }
-            saveGame();
-        });
-    } else {
-        npc := [];
-    }
+        }
+        saveGame();
+    });
 }
 
 def drawUI() {
@@ -93,6 +111,9 @@ def drawUI() {
     if(gameMode = CONVO || gameMode = TRADE) {
         color := COLOR_TEAL;
     }
+    if(gameMode = COMBAT) {
+        color := COLOR_RED;
+    }
 
     drawRect(4, 5, 5 + TILE_W * MAP_VIEW_W, 5 + TILE_H * MAP_VIEW_H, color);
 
@@ -100,6 +121,16 @@ def drawUI() {
     x := 10 + TILE_W * MAP_VIEW_W;
     y := 5;
     drawRect(x, y, x + (320 - x - 5), 40, color);
+    array_foreach(player.party, (i, p) => {
+        drawColoredText(x + 2, y + 2 + i * 10, COLOR_MID_GRAY, COLOR_BLACK, substr(p.name, 0, 9));
+        drawColoredText(x + 82, y + 2 + i * 10, COLOR_WHITE, COLOR_BLACK, "H" + p.hp);
+        if(gameMode = COMBAT) {
+            combatRoundInfo := array_find(combat.round, r => { return r.type = "pc" && r.index = player.partyIndex; });
+            if(combatRoundInfo != null) {
+                drawColoredText(x + 108, y + 2 + i * 10, COLOR_WHITE, COLOR_BLACK, "A" + combatRoundInfo.ap);
+            }
+        }
+    });
 
     # party info
     y := 45;
@@ -141,7 +172,19 @@ def renderGame() {
         moveNpcs();
     }
     if(tradeMode = null) {
-        drawView(player.x, player.y);
+        mx := player.x;
+        my := player.y;
+        if(gameMode = COMBAT) {
+            combatRoundInfo := combat.round[combat.roundIndex];
+            if(combatRoundInfo.type = "pc") {
+                mx := player.x;
+                my := player.y;
+            } else {
+                mx := map.monster[combatRoundInfo.index].pos[0];
+                mx := map.monster[combatRoundInfo.index].pos[1];
+            }
+        }
+        drawView(mx, my);
     }    
 }
 
@@ -169,7 +212,7 @@ def findLight(mx, my) {
     if(abs(dx) <= LIGHT_RADIUS && abs(dy) <= LIGHT_RADIUS) {
         block := getBlock(mx, my);
         block.light := 1;
-        if(blocks[block.block].blocking = false) {
+        if(blocks[block.block].light = false) {
             if(getBlock(mx - 1, my).light = -1) {
                 findLight(mx - 1, my);
             }
@@ -207,17 +250,35 @@ def gameIsBlockVisible(mx, my) {
 def gameDrawViewAt(x, y, mx, my) {
     block := getBlock(mx, my);
     if(mx = player.x && my = player.y) {
-        drawImage(x, y, player.image, 0);
+        drawImage(x, y, player.party[player.partyIndex].image, 0);
+        if(gameMode = COMBAT && combat.playerControl) {
+            drawRect(x, y, x + TILE_W - 1, y + TILE_H - 1, COLOR_YELLOW);
+        }
     }
-    array_foreach(npc, (i, e) => {
+    array_foreach(map.npc, (i, e) => {
         if(e.pos[0] = mx && e.pos[1] = my) {
             drawImage(x, y, e.image, 0);
         }
     });
+    monsters := [];
+    array_foreach(array_filter(map.monster, e => e.hp > 0), (i, e) => {
+        if(e.pos[0] = mx && e.pos[1] = my) {
+            drawImage(x, y, e.image, 0);
+            monsters[len(monsters)] := e;
+            if(gameMode = COMBAT && combat.playerControl = false) {
+                if(combat.round[combat.roundIndex].index = i) {
+                    drawRect(x, y, x + TILE_W - 1, y + TILE_H - 1, COLOR_YELLOW);
+                }
+            }
+        }
+    });
+    if(len(monsters) > 0) {
+        startCombat(monsters);
+    }
 }
 
 def moveNpcs() {
-    array_foreach(npc, (i, e) => {
+    array_foreach(map.npc, (i, e) => {
         if(random() > 0.5) {
             dx := choose([ 1, -1 ]);
             dy := choose([ 1, -1 ]);
@@ -341,7 +402,7 @@ def gameSearch() {
 
 def gameConvo() {
     aroundPlayer((x, y) => {
-        n := array_find(npc, e => e.pos[0] = x && e.pos[1] = y);
+        n := array_find(map.npc, e => e.pos[0] = x && e.pos[1] = y);
         if(n != null && events[mapName]["onConvo"] != null) {
             convo := events[mapName].onConvo(n);
             if(convo != null) {
@@ -360,6 +421,7 @@ def startConvo(theNpc, theConvoMap) {
     convo.key := "";
 
     clearGameMessages();
+    gameMessageLong(true);
     gameMessage("Talking to " + theNpc.name, COLOR_GREEN);
     showConvoText();
 }
@@ -435,12 +497,15 @@ def saveGame() {
 }
 
 def showGameHelp() {
+    clearGameMessages();
+    gameMessageLong(true);
     gameMessage("_1_Arrows: movement", COLOR_MID_GRAY);
     gameMessage("_1_H: help", COLOR_MID_GRAY);
     gameMessage("_1_S: speak", COLOR_MID_GRAY);
     gameMessage("_1_Space: search/use door", COLOR_MID_GRAY);
     gameMessage("_1_Enter: use stairs/gate", COLOR_MID_GRAY);
     gameMessage("_1_Numbers: option in conversation or trade", COLOR_MID_GRAY);
+    gameMessageLong(false);
 }
 
 def gameInput() {
@@ -453,7 +518,7 @@ def gameInput() {
         while(anyKeyDown()) {}
         pageGameMessages();
     }
-    if(gameMode = MOVE) {
+    if(gameMode = MOVE || (gameMode = COMBAT && combat.playerControl)) {
         ox := player.x;
         oy := player.y;
         if(isKeyDown(KeyEnter)) {
@@ -490,11 +555,15 @@ def gameInput() {
             player.y := oy;
         } else {
             # if stepping on an npc, swap places
-            n := array_find(npc, e => e.pos[0] = player.x && e.pos[1] = player.y);
+            n := array_find(map.npc, e => e.pos[0] = player.x && e.pos[1] = player.y);
             if(n != null) {
                 n.pos[0] := ox;
                 n.pos[1] := oy;
-            }    
+            }
+        }
+
+        if(gameMode = COMBAT) {
+            combatTurnStep();
         }
     }
 
@@ -529,6 +598,7 @@ def gameInput() {
                 gameMode := MOVE;
                 tradeMode := null;
                 gameMessage("Bye.", COLOR_MID_GRAY);
+                gameMessageLong(false);
             } else {
                 if(tradeMode = "_buy_") {
                     buyItem(index - 1);

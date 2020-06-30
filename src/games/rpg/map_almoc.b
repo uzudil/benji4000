@@ -7,15 +7,6 @@ const events_almoc = {
             gameMessage("Arrived in the village Almoc", COLOR_LIGHT_BLUE);
         }
     },
-    "onNpcInit": self => {
-        return [
-            { "name": "Arnel", "block": "man1", "pos": [10, 12] },
-            { "name": "Snael", "block": "man2", "pos": [23, 10] },
-            { "name": "Ragh", "block": "man3", "pos": [10, 22] },
-            { "name": "Malde", "block": "woman1", "pos": [17, 16] },
-            { "name": "Vinkh", "block": "woman2", "pos": [22, 22] },
-        ];
-    },
     "onConvo": (self, n) => {
         if(n.name = "Arnel") {
             return {
@@ -28,7 +19,10 @@ const events_almoc = {
         }
         if(n.name = "Snael") {
             return {
-                "": "I $trade|_trade_ in food and draughts. Prices are reasonable and quite final.",
+                "": "Welcome to the Inn of the Rose. A lovely $place, besides the $rats|rat.",
+                "rat": "My $cellar is infested with rats. If you clear them out, I'll reward you!",
+                "cellar": "Just down the stairs.",
+                "place": "I $trade|_trade_ in food and drinks. Let me know if you need some!",
             };
         }
         if(n.name = "Vinkh") {

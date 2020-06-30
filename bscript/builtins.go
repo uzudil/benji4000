@@ -136,7 +136,7 @@ func length(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		s, ok := arg[0].(string)
 		if !ok {
-			return nil, fmt.Errorf("argument to len() should be an array or a string")
+			return nil, fmt.Errorf("%s argument to len() should be an array or a string", ctx.Pos)
 		}
 		return float64(len(s)), nil
 	}
