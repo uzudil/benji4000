@@ -51,7 +51,11 @@ def array_foreach(array, fx) {
 }
 
 def choose(array) {
-    return array[random() * len(array)];
+    if(len(array) > 0) {
+        return array[random() * len(array)];
+    } else {
+        return null;
+    }
 }
 
 def drawColoredText(x, y, fg, bg, text) {

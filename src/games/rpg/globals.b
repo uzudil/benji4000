@@ -30,15 +30,22 @@ const MODES = {
         "init": self => initEditor(),
         "render": self => renderEditor(),
         "isBlockVisible": (self, mx, my) => true,
-        "drawViewAt": (self, x, y, mx, my) => editorDrawViewAt(x, y, mx, my),
+        "drawViewAt": (self, x, y, mx, my, onScreen) => editorDrawViewAt(x, y, mx, my, onScreen),
         "handleInput": self => handleEditorInput(),
     },
     "game": {
         "init": self => initGame(),
         "render": self => renderGame(),
         "isBlockVisible": (self, mx, my) => gameIsBlockVisible(mx, my),
-        "drawViewAt": (self, x, y, mx, my) => gameDrawViewAt(x, y, mx, my),
+        "drawViewAt": (self, x, y, mx, my, onScreen) => gameDrawViewAt(x, y, mx, my, onScreen),
         "handleInput": self => gameInput(),
+    },
+    "death": {
+        "init": self => initDeath(),
+        "render": self => renderDeath(),
+        "handleInput": self => deathInput(),
+        "isBlockVisible": (self, mx, my) => 0,
+        "drawViewAt": (self, x, y, mx, my, onScreen) => 0,
     }
 };
 

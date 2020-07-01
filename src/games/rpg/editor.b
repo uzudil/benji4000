@@ -166,7 +166,7 @@ def blockPalette(x, y) {
     }
 }
 
-def editorDrawViewAt(x, y, mx, my) {
+def editorDrawViewAt(x, y, mx, my, onScreen) {
     if(mx = editor.x && my = editor.y) {
         drawRect(x, y, x + TILE_W - 1, y + TILE_H - 1, COLOR_YELLOW);
     }

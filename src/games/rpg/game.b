@@ -49,7 +49,28 @@ def initGame() {
             "name": playerName,
             "hp": 10,
             "image": img[blocks[getBlockIndexByName("fighter1")].img],
+            "index": 0,
         };
+
+        # for combat testing
+        player.party[len(player.party)] := {
+            "name": "test1",
+            "hp": 10,
+            "image": img[blocks[getBlockIndexByName("fighter1")].img],
+            "index": 1,
+        };
+        player.party[len(player.party)] := {
+            "name": "test2",
+            "hp": 10,
+            "image": img[blocks[getBlockIndexByName("robes2")].img],
+            "index": 2,
+        };
+        player.party[len(player.party)] := {
+            "name": "test3",
+            "hp": 10,
+            "image": img[blocks[getBlockIndexByName("man2")].img],
+            "index": 3,
+        };        
     } else {
         player := savegame;
         player.messages := [];
@@ -67,6 +88,9 @@ def gameLoadMap(name) {
     array_foreach(map.monster, (i, e) => {
         e["image"] := img[blocks[e.block].img];
         e["start"] := [e.pos[0], e.pos[1]];
+        e["id"] := "" + e.pos[0] + "," + e.pos[1];
+        e["visible"] := false;
+        e["monsterTemplate"] := array_find(MONSTERS, m => m.block = blocks[e.block].img);
 
         if(player.monster[name] = null) {
             player.monster[name] := [];
@@ -76,8 +100,7 @@ def gameLoadMap(name) {
             e["hp"] := player.monster[name][idx].hp;
             e["pos"] := player.monster[name][idx].pos;
         } else {
-            monster_template := array_find(MONSTERS, m => m.block = blocks[e.block].img);
-            e["hp"] := roll(monster_template.startHp[0], monster_template.startHp[1]);
+            e["hp"] := roll(e.monsterTemplate.startHp[0], e.monsterTemplate.startHp[1]);
         }
     });
     array_foreach(map.npc, (i, e) => {
@@ -125,7 +148,7 @@ def drawUI() {
         drawColoredText(x + 2, y + 2 + i * 10, COLOR_MID_GRAY, COLOR_BLACK, substr(p.name, 0, 9));
         drawColoredText(x + 82, y + 2 + i * 10, COLOR_WHITE, COLOR_BLACK, "H" + p.hp);
         if(gameMode = COMBAT) {
-            combatRoundInfo := array_find(combat.round, r => { return r.type = "pc" && r.index = player.partyIndex; });
+            combatRoundInfo := array_find(combat.round, r => { return r.type = "pc" && r.pc.index = i; });
             if(combatRoundInfo != null) {
                 drawColoredText(x + 108, y + 2 + i * 10, COLOR_WHITE, COLOR_BLACK, "A" + combatRoundInfo.ap);
             }
@@ -180,11 +203,13 @@ def renderGame() {
                 mx := player.x;
                 my := player.y;
             } else {
-                mx := map.monster[combatRoundInfo.index].pos[0];
-                mx := map.monster[combatRoundInfo.index].pos[1];
+                mx := combatRoundInfo.monster.pos[0];
+                my := combatRoundInfo.monster.pos[1];
             }
         }
-        drawView(mx, my);
+        array_foreach(map.monster, (i, m) => { m.visible := false; });
+        drawViewRadius(mx, my, LIGHT_RADIUS * 2);
+        startCombat();
     }    
 }
 
@@ -247,34 +272,47 @@ def gameIsBlockVisible(mx, my) {
     return block["light"] = 1;
 }
 
-def gameDrawViewAt(x, y, mx, my) {
-    block := getBlock(mx, my);
-    if(mx = player.x && my = player.y) {
-        drawImage(x, y, player.party[player.partyIndex].image, 0);
-        if(gameMode = COMBAT && combat.playerControl) {
-            drawRect(x, y, x + TILE_W - 1, y + TILE_H - 1, COLOR_YELLOW);
+def gameDrawViewAt(x, y, mx, my, onScreen) {
+    if(onScreen) {
+        if(gameMode = COMBAT) {
+            # draw the other party members
+            array_foreach(player.party, (i, p) => {
+                if(mx = p.pos[0] && my = p.pos[1]) {
+                    if(p.hp > 0) {
+                        drawImage(x, y, p.image, 0);
+                    } else {
+                        drawImage(x, y, img["bones"], 0);
+                    }
+                    if(combat.playerControl && i = player.partyIndex) {
+                        drawRect(x, y, x + TILE_W - 1, y + TILE_H - 1, COLOR_YELLOW);
+                    }
+                }
+            });
+        } else {
+            # draw the player only
+            if(mx = player.x && my = player.y) {
+                drawImage(x, y, player.party[player.partyIndex].image, 0);
+            }
         }
+        array_foreach(map.npc, (i, e) => {
+            if(e.pos[0] = mx && e.pos[1] = my) {
+                drawImage(x, y, e.image, 0);
+            }
+        });
     }
-    array_foreach(map.npc, (i, e) => {
-        if(e.pos[0] = mx && e.pos[1] = my) {
-            drawImage(x, y, e.image, 0);
-        }
-    });
-    monsters := [];
     array_foreach(array_filter(map.monster, e => e.hp > 0), (i, e) => {
         if(e.pos[0] = mx && e.pos[1] = my) {
-            drawImage(x, y, e.image, 0);
-            monsters[len(monsters)] := e;
-            if(gameMode = COMBAT && combat.playerControl = false) {
-                if(combat.round[combat.roundIndex].index = i) {
-                    drawRect(x, y, x + TILE_W - 1, y + TILE_H - 1, COLOR_YELLOW);
+            e.visible := true;
+            if(onScreen) {
+                drawImage(x, y, e.image, 0);            
+                if(gameMode = COMBAT && combat.playerControl = false) {
+                    if(combat.round[combat.roundIndex].monster.id = e.id) {
+                        drawRect(x, y, x + TILE_W - 1, y + TILE_H - 1, COLOR_YELLOW);
+                    }
                 }
             }
         }
     });
-    if(len(monsters) > 0) {
-        startCombat(monsters);
-    }
 }
 
 def moveNpcs() {
@@ -560,9 +598,11 @@ def gameInput() {
                 n.pos[0] := ox;
                 n.pos[1] := oy;
             }
-        }
+        }        
 
         if(gameMode = COMBAT) {
+            player.party[player.partyIndex].pos[0] := player.x;
+            player.party[player.partyIndex].pos[1] := player.y;
             combatTurnStep();
         }
     }
