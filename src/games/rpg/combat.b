@@ -38,20 +38,24 @@ def initCombatRound() {
     combat.round := [];
     combat.roundIndex := 0;
     combat.roundCount := combat.roundCount + 1;
+    array_foreach(monsters, (i, p) => { 
+        combat.round[len(combat.round)] := {
+            "type": "monster",
+            "monster": p,
+            "ap": 10,
+            "target": null,
+            "path": [],
+            "pathIndex": 0,
+            "pathDx": 0,
+            "pathDy": 0,
+        }; 
+    });
     array_foreach(player.party, (i, p) => { 
         combat.round[len(combat.round)] := {
             "type": "pc",
             "pc": p,
             "ap": 10
         };
-    });
-    array_foreach(monsters, (i, p) => { 
-        combat.round[len(combat.round)] := {
-            "type": "monster",
-            "monster": p,
-            "ap": 10,
-            "target": choose(pc),
-        }; 
     });
     
     # todo: order by initiative
@@ -76,6 +80,8 @@ def runCombatTurn() {
 
             combat.playerControl := true;
             gameMessage("It is your turn: " + combatRound.pc.name, COLOR_MID_GRAY);
+            renderGame();
+            updateVideo();
         }
     } else {
         monster := combatRound.monster;
@@ -83,16 +89,54 @@ def runCombatTurn() {
             combatTurnEnd();
         } else {
             combat.playerControl := false;
-            gameMessage(monster.monsterTemplate.name + "'s targets " + combatRound.target.name, COLOR_MID_GRAY);
             while(monster.visible && combatRound.ap > 0) {
-                d := getMonsterToTarget();
-                if(abs(d[0]) <= monster.monsterTemplate.range && abs(d[1]) <= monster.monsterTemplate.range) {
-                    attackMonster();
-                    combatRound.ap := combatRound.ap - monster.monsterTemplate.attackAp;
-                } else {
-                    moveMonster();
-                    combatRound.ap := combatRound.ap - 1;
+                if(combatRound.target != null) {
+                    # target died
+                    if(combatRound.target.hp <= 0) {
+                        combatRound.target := null;
+                    }
+
+                    # if target moved
+                    if(len(combatRound.path) > 0) {
+                        lastNode := combatRound.path[len(combatRound.path) - 1];
+                        if(lastNode.x != combatRound.target.pos[0] || lastNode.y != combatRound.target.pos[1]) {
+                            combatRound.path := [];
+                        }
+                    }
                 }
+
+                try := 0;
+                while(try < 3 && (combatRound.target = null || len(combatRound.path) = 0)) {
+                    if(combatRound.target = null) {
+                        combatRound.target := choose(array_filter(player.party, p => p.hp > 0));
+                        combatRound.path := [];
+                    }
+                    if(len(combatRound.path) = 0) {
+                        getMonsterPath();                    
+                        if(len(combatRound.path) > 0) {
+                            gameMessage(monster.monsterTemplate.name + "'s targets " + combatRound.target.name, COLOR_MID_GRAY);
+                        } else {
+                            combatRound.target := null;
+                        }
+                    }
+                    try := try + 1;
+                }
+
+                apUsed := 1;
+                if(combatRound.target != null) {
+                    d := getMonsterToTarget();
+                    if(abs(d[0]) <= monster.monsterTemplate.range && abs(d[1]) <= monster.monsterTemplate.range) {
+                        attackMonster();
+                        apUsed := monster.monsterTemplate.attackAp;
+                    } else {
+                        if(combatRound.pathIndex < len(combatRound.path)) {
+                            moveMonster();
+                        }
+                    }
+                }
+
+                combatRound.ap := combatRound.ap - apUsed;
+
                 sleep(500);
                 renderGame();
                 updateVideo();
@@ -154,22 +198,20 @@ def moveMonster() {
     combatRound := combat.round[combat.roundIndex];
     monster := combatRound.monster;
 
-    dir := getMonsterToTarget();
     moved := false;
-    if(dir[0] != 0) {
-        d := dir[0] / abs(dir[0]);
-        if(canMoveTo(monster.pos[0] - d, monster.pos[1])) {
-            monster.pos[0] := monster.pos[0] - d;
-            moved := true;
-        }
+    pathNode := combatRound.path[combatRound.pathIndex];
+    nx := pathNode.x + combatRound.pathDx;
+    ny := pathNode.y + combatRound.pathDy;
+    #trace("At " + monster.pos[0] + "," + monster.pos[1] + " trying: " + nx + "," + ny);
+    if(canMoveTo(nx, ny)) {
+        monster.pos[0] := nx;
+        monster.pos[1] := ny;
+        combatRound.pathIndex := combatRound.pathIndex + 1;
+        moved := true;
+        #trace("...yes");
+    } else {
+        #trace("...no");
     }
-    if(moved = false && dir[1] != 0) {
-        d := dir[1] / abs(dir[1]);
-        if(canMoveTo(monster.pos[0], monster.pos[1] - d)) {
-            monster.pos[1] := monster.pos[1] - d;
-            moved := true;
-        }
-    }    
 
     if(moved) {
         gameMessage(monster.monsterTemplate.name + " moves", COLOR_MID_GRAY);
@@ -227,9 +269,49 @@ def playerAttacks(monster) {
                 gameMessage(monster.monsterTemplate.name + " is wounded!", COLOR_RED);
             }
         }
-        return 3;
     } else {
         gameMessage(combatRound.pc.name + " misses.", COLOR_MID_GRAY);
-        return 0;
+    }
+    return 3;
+}
+
+def getMonsterPath() {
+    combatRound := combat.round[combat.roundIndex];
+    combatRound.pathIndex := 0;
+    if(combatRound.target = null) {
+        combatRound.path := [];
+    } else {
+        r := LIGHT_RADIUS * 2 - 1;
+        info := {
+            "grid": [],
+            "start": null,
+            "end": null,
+        };
+        traverseMapAround(
+            combatRound.monster.pos[0], 
+            combatRound.monster.pos[1], 
+            r, 
+            (px, py, x, y, mapx, mapy, onScreen, mapBlock) => {
+                if(len(info.grid) <= x) {
+                    info.grid[x] := [];                    
+                }
+                block := blocks[mapBlock.block];
+                blocked := block.blocking;
+                # todo: go around non-target players, npc-s, other monsters
+                info.grid[x][y] := newGridNode(x, y, blocked);
+                if(mapx = combatRound.monster.pos[0] && mapy = combatRound.monster.pos[1]) {
+                    info.start := info.grid[x][y];
+                }
+                if(mapx = combatRound.target.pos[0] && mapy = combatRound.target.pos[1]) {
+                    info.end := info.grid[x][y];
+                }
+            }
+        );
+        #trace("Looking for path, from=" + info.start.pos + " to=" + info.end.pos);
+        combatRound.path := astarSearch(info.grid, info.start, info.end);        
+        combatRound.pathDx := combatRound.monster.pos[0] - info.start.x;
+        combatRound.pathDy := combatRound.monster.pos[1] - info.start.y;
+        #trace("Found path=" + array_map(combatRound.path, p => p.pos));
+        #trace("path delta=" + combatRound.pathDx + "," + combatRound.pathDy);
     }
 }

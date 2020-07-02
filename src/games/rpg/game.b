@@ -214,7 +214,7 @@ def renderGame() {
             }
         }
         array_foreach(map.monster, (i, m) => { m.visible := false; });
-        drawViewRadius(mx, my, LIGHT_RADIUS * 2);
+        drawViewRadius(mx, my, LIGHT_RADIUS * 2 - 1);
         startCombat();
     }    
 }

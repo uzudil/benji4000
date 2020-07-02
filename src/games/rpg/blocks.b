@@ -104,4 +104,5 @@ blocks := [
     { "img": "bones2" }, 
     { "img": "rat" }, 
     { "img": "blood" }, 
+    { "img": "skeleton" }, 
 ];

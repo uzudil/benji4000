@@ -101,3 +101,13 @@ def sort(array, fx) {
     }
     trace("sort after: " + array);
 }
+
+def array_reverse(array) {
+    ret := [];
+    i := len(array) - 1;
+    while(i >= 0) {
+        ret[len(ret)] := array[i];
+        i := i - 1;
+    }
+    return ret;    
+}

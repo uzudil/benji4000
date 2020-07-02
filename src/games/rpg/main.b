@@ -16,6 +16,18 @@ def drawView(mx, my) {
 }
 
 def drawViewRadius(mx, my, r) {
+    traverseMapAround(mx, my, r, (px, py, x, y, mapx, mapy, onScreen, mapBlock) => {
+        if(MODES[mode].isBlockVisible(mapx, mapy)) {
+            if(onScreen) {
+                block := blocks[mapBlock.block];
+                drawImageRot(px, py, mapBlock.rot, mapBlock.xflip, mapBlock.yflip, img[block.img]);
+            }
+            MODES[mode].drawViewAt(px, py, mapx, mapy, onScreen);
+        }
+    });
+}
+
+def traverseMapAround(mx, my, r, fx) {
     ox := int((MAP_VIEW_W - r)/2);
     oy := int((MAP_VIEW_H - r)/2);
     x := 0; 
@@ -26,15 +38,9 @@ def drawViewRadius(mx, my, r) {
             py := (y + oy) * TILE_H + 5;
             mapx := mx - int(r/2) + x;
             mapy := my - int(r/2) + y;
-            if(MODES[mode].isBlockVisible(mapx, mapy)) {
-                onScreen := x + ox >= 0 && x + ox < MAP_VIEW_W && y + oy >= 0 && y + oy < MAP_VIEW_H;
-                if(onScreen) {
-                    mapBlock := getBlock(mapx, mapy);
-                    block := blocks[mapBlock.block];
-                    drawImageRot(px, py, mapBlock.rot, mapBlock.xflip, mapBlock.yflip, img[block.img]);
-                }
-                MODES[mode].drawViewAt(px, py, mapx, mapy, onScreen);
-            }
+            mapBlock := getBlock(mapx, mapy);            
+            onScreen := x + ox >= 0 && x + ox < MAP_VIEW_W && y + oy >= 0 && y + oy < MAP_VIEW_H;
+            fx(px, py, x, y, mapx, mapy, onScreen, mapBlock);
             y := y + 1;
         }
         x := x + 1;
