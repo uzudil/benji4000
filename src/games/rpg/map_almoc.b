@@ -20,7 +20,23 @@ const events_almoc = {
         if(n.name = "Snael") {
             return {
                 "": "Welcome to the Inn of the Rose. A lovely $place, besides the $rats|rat.",
-                "rat": "My $cellar is infested with rats. If you clear them out, I'll reward you!",
+                "rat": () => {
+                    c := getGameState("almoc_rats");
+                    if(c = null) {
+                        c := 0;
+                    }
+                    if(c >= 4) {
+                        if(getGameState("almoc_rats_done") = null) {
+                            player.coins := player.coins + 25;
+                            setGameState("almoc_rats_done", true);
+                            return "Here's some money for killing the rats. I'm forever grateful!";
+                        } else {
+                            return "Thanks again for clearing out those rats. I'm forever grateful!";
+                        }
+                    } else {
+                        return "My $cellar is infested with rats. If you clear them out, I'll reward you!";
+                    }
+                },
                 "cellar": "Just down the stairs.",
                 "place": "I $trade|_trade_ in food and drinks. Let me know if you need some!",
             };

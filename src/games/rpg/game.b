@@ -45,34 +45,22 @@ def initGame() {
     savegame := load("savegame.dat");
     if(savegame = null) {
         gameMessage("You awake underground surrounded by damp earth and old bones. Press H any time for help.", COLOR_YELLOW);
-        player.party[len(player.party)] := {
-            "name": playerName,
-            "hp": 10,
-            "image": img[blocks[getBlockIndexByName("fighter1")].img],
-            "index": 0,
-        };
+        c := newChar(playerName, "fighter1");
+        c["index"] := 0;
+        player.party[0] := c;
 
         # for combat testing
-        player.party[len(player.party)] := {
-            "name": "test1",
-            "hp": 10,
-            "image": img[blocks[getBlockIndexByName("fighter1")].img],
-            "index": 1,
-        };
-        player.party[len(player.party)] := {
-            "name": "test2",
-            "hp": 10,
-            "image": img[blocks[getBlockIndexByName("robes2")].img],
-            "index": 2,
-        };
-        player.party[len(player.party)] := {
-            "name": "test3",
-            "hp": 10,
-            "image": img[blocks[getBlockIndexByName("man2")].img],
-            "index": 3,
-        };        
+        i := 1;
+        while(i < 4) {
+            name := choose(["fighter1", "robes2", "robes", "man1", "man2", "woman1", "woman2"]);
+            c := newChar(name, name);
+            c["index"] := i;
+            player.party[len(player.party)] := c;
+            i := i + 1;
+        }      
     } else {
         player := savegame;
+        player.partyIndex := array_find_index(player.party, p => p.hp > 0);
         player.messages := [];
         gameMessage("You continue on your adventure.", COLOR_WHITE);
     }
@@ -93,14 +81,13 @@ def gameLoadMap(name) {
         e["monsterTemplate"] := array_find(MONSTERS, m => m.block = blocks[e.block].img);
 
         if(player.monster[name] = null) {
-            player.monster[name] := [];
+            player.monster[name] := {};
         }
-        idx := array_find_index(player.monster[name], m => m.start[0] = e.start[0] && m.start[1] = e.start[1]);
-        if(idx > -1) {
-            e["hp"] := player.monster[name][idx].hp;
-            e["pos"] := player.monster[name][idx].pos;
+        if(player.monster[name][e.id] != null) {
+            e["hp"] := player.monster[name][e.id].hp;
+            e["pos"] := player.monster[name][e.id].pos;
         } else {
-            e["hp"] := roll(e.monsterTemplate.startHp[0], e.monsterTemplate.startHp[1]);
+            e["hp"] := e.monsterTemplate.startHp;
         }
     });
     array_foreach(map.npc, (i, e) => {
@@ -143,20 +130,39 @@ def drawUI() {
     # pc-s
     x := 10 + TILE_W * MAP_VIEW_W;
     y := 5;
-    drawRect(x, y, x + (320 - x - 5), 40, color);
+    drawRect(x, y, x + (320 - x - 5), 45, color);
     array_foreach(player.party, (i, p) => {
-        drawColoredText(x + 2, y + 2 + i * 10, COLOR_MID_GRAY, COLOR_BLACK, substr(p.name, 0, 9));
-        drawColoredText(x + 82, y + 2 + i * 10, COLOR_WHITE, COLOR_BLACK, "H" + p.hp);
+        color := COLOR_MID_GRAY;
         if(gameMode = COMBAT) {
-            combatRoundInfo := array_find(combat.round, r => { return r.type = "pc" && r.pc.index = i; });
-            if(combatRoundInfo != null) {
-                drawColoredText(x + 108, y + 2 + i * 10, COLOR_WHITE, COLOR_BLACK, "A" + combatRoundInfo.ap);
+            if(combat.round[combat.roundIndex].type = "pc") {
+                if(combat.round[combat.roundIndex].pc.index = i) {
+                    color := COLOR_YELLOW;
+                }
             }
         }
+        drawColoredText(x + 2, y + 2 + i * 10, color, COLOR_BLACK, substr(p.name, 0, 9));
+        drawColoredText(x + 82, y + 2 + i * 10, color, COLOR_BLACK, "H" + p.hp);
     });
 
+    # show AP
+    if(gameMode = COMBAT) {
+        if(combat.playerControl) {
+            apColor := COLOR_GREEN;
+        } else {
+            apColor := COLOR_MID_GRAY;
+        }
+        combatRound := combat.round[combat.roundIndex];
+        drawText(5, 10 + TILE_H * MAP_VIEW_H, apColor, COLOR_BLACK, "AP:");
+        fillRect(
+            30, 
+            12 + TILE_H * MAP_VIEW_H, 
+            30 + max(0, (combatRound.ap/10))*(TILE_W * MAP_VIEW_W - 30), 
+            15 + TILE_H * MAP_VIEW_H, 
+            apColor);
+    }
+
     # party info
-    y := 45;
+    y := 50;
     message_y := 81;
     drawRect(x, y, x + (320 - x - 5), message_y - 5, color); 
     drawColoredText(x + 5, y + 5, COLOR_MID_GRAY, COLOR_BLACK, "Coins _1_$" + player.coins);
@@ -300,11 +306,17 @@ def gameDrawViewAt(x, y, mx, my, onScreen) {
             }
         });
     }
-    array_foreach(array_filter(map.monster, e => e.hp > 0), (i, e) => {
+    array_foreach(map.monster, (i, e) => {
         if(e.pos[0] = mx && e.pos[1] = my) {
-            e.visible := true;
+            if(e.hp > 0) {
+                e.visible := true;
+            }
             if(onScreen) {
-                drawImage(x, y, e.image, 0);            
+                if(e.hp > 0) {
+                    drawImage(x, y, e.image, 0);
+                } else {
+                    drawImage(x, y, img["blood"], 0);
+                }
                 if(gameMode = COMBAT && combat.playerControl = false) {
                     if(combat.round[combat.roundIndex].monster.id = e.id) {
                         drawRect(x, y, x + TILE_W - 1, y + TILE_H - 1, COLOR_YELLOW);
@@ -522,6 +534,10 @@ def setGameState(name, value) {
     saveGame();
 }
 
+def getGameState(name) {
+    return player.gameState[name];
+}
+
 def setGameBlock(x, y, index) {
     if(player.blocks[player.map] = null) {
         player.blocks[player.map] := {};
@@ -531,6 +547,12 @@ def setGameBlock(x, y, index) {
 }
 
 def saveGame() {
+    array_foreach(map.monster, (i, m) => {
+        player.monster[mapName][m.id] := {
+            "hp": m.hp,
+            "pos": m.pos,
+        };
+    });
     save("savegame.dat", player);
 }
 
@@ -557,6 +579,7 @@ def gameInput() {
         pageGameMessages();
     }
     if(gameMode = MOVE || (gameMode = COMBAT && combat.playerControl)) {
+        apUsed := 0;
         ox := player.x;
         oy := player.y;
         if(isKeyDown(KeyEnter)) {
@@ -574,6 +597,7 @@ def gameInput() {
             }
             gameUseDoor();
             gameSearch();
+            apUsed := apUsed + 1;
         }
         if(isKeyDown(KeyUp)) {
             player.y := player.y - 1;
@@ -586,9 +610,28 @@ def gameInput() {
         }
         if(isKeyDown(KeyRight)) {
             player.x := player.x + 1;
+        }        
+
+        blocked := player.x < 0 || player.y < 0 || player.x >= map.width || player.y >= map.height;
+        if(blocked = false) {
+            m := array_find(map.monster, e => e.pos[0] = player.x && e.pos[1] = player.y && e.hp > 0);
+            blocked := m != null;
+            if(m != null && gameMode = COMBAT) {
+                apUsed := apUsed + playerAttacks(m);
+            }
         }
-        block := blocks[getBlock(player.x, player.y).block];
-        if(block.blocking || player.x < 0 || player.y < 0 || player.x >= map.width || player.y >= map.height) {
+        if(blocked = false) {
+            block := blocks[getBlock(player.x, player.y).block];
+            blocked := block.blocking;
+        }
+        if(blocked = false && gameMode = COMBAT) {
+            # if old pos is not on another player
+            if(array_find(player.party, e => e.pos[0] = ox && e.pos[1] = oy && e.hp > 0 && e.index != player.partyIndex) = null) {
+                # don't allow stepping on another live player
+                blocked := array_find(player.party, e => e.pos[0] = player.x && e.pos[1] = player.y && e.hp > 0 && e.index != player.partyIndex) != null;
+            }
+        }
+        if(blocked) {
             player.x := ox;
             player.y := oy;
         } else {
@@ -598,12 +641,18 @@ def gameInput() {
                 n.pos[0] := ox;
                 n.pos[1] := oy;
             }
-        }        
 
-        if(gameMode = COMBAT) {
-            player.party[player.partyIndex].pos[0] := player.x;
-            player.party[player.partyIndex].pos[1] := player.y;
-            combatTurnStep();
+            if(gameMode = COMBAT) {
+                # trace("SAVING POS of " + player.partyIndex);
+                player.party[player.partyIndex].pos[0] := player.x;
+                player.party[player.partyIndex].pos[1] := player.y;
+                apUsed := apUsed + 1;
+            }
+        }
+
+        # do this last, as it can switch players
+        if(gameMode = COMBAT && apUsed > 0) {
+            combatTurnStep(apUsed);
         }
     }
 
