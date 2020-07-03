@@ -1,20 +1,5 @@
 playerName := "Anonymous";
-player := {
-    "x": 18,
-    "y": 4,
-    "map": "bonefell",
-    "blockIndex": 0,
-    "messages": [],
-    "gameState": {},
-    "blocks": {},
-    "traders": {},
-    "inventory": [],
-    "coins": 10,
-    "messagePaging": false,
-    "monster": {},
-    "party": [],
-    "partyIndex": 0,
-};
+player := {};
 
 const LIGHT_RADIUS = 15;
 
@@ -44,6 +29,23 @@ def initGame() {
 
     savegame := load("savegame.dat");
     if(savegame = null) {
+        player := {
+            "x": 18,
+            "y": 4,
+            "map": "bonefell",
+            "blockIndex": 0,
+            "messages": [],
+            "gameState": {},
+            "blocks": {},
+            "traders": {},
+            "inventory": [],
+            "coins": 10,
+            "messagePaging": false,
+            "monster": {},
+            "party": [],
+            "partyIndex": 0,
+        };    
+
         gameMessage("You awake underground surrounded by damp earth and old bones. Press H any time for help.", COLOR_YELLOW);
         c := newChar(playerName, "fighter1");
         c["index"] := 0;
@@ -624,13 +626,6 @@ def gameInput() {
             block := blocks[getBlock(player.x, player.y).block];
             blocked := block.blocking;
         }
-        if(blocked = false && gameMode = COMBAT) {
-            # if old pos is not on another player
-            if(array_find(player.party, e => e.pos[0] = ox && e.pos[1] = oy && e.hp > 0 && e.index != player.partyIndex) = null) {
-                # don't allow stepping on another live player
-                blocked := array_find(player.party, e => e.pos[0] = player.x && e.pos[1] = player.y && e.hp > 0 && e.index != player.partyIndex) != null;
-            }
-        }
         if(blocked) {
             player.x := ox;
             player.y := oy;
@@ -640,6 +635,15 @@ def gameInput() {
             if(n != null) {
                 n.pos[0] := ox;
                 n.pos[1] := oy;
+            }
+
+            if(gameMode = COMBAT) {
+                # if stepping on another player, swap places
+                pc := array_find(player.party, e => e.pos[0] = player.x && e.pos[1] = player.y && e.hp > 0 && e.index != player.partyIndex);
+                if(pc != null) {
+                    pc.pos[0] := ox;
+                    pc.pos[1] := oy;
+                }
             }
 
             if(gameMode = COMBAT) {
@@ -736,4 +740,48 @@ def sellItem(index) {
     } else {
         gameMessage("Invalid choice.", COLOR_MID_GRAY);
     }
+}
+
+
+def findSpaceAround(mx, my) {
+    r := 1;
+    while(r < 10) {
+        x := -1 * r;
+        while(x <= r) {
+            y := -1 * r;
+            while(y <= r) {
+                mapx := mx + x;
+                mapy := my + y;
+                if(mapx >= 0 && mapy >= 0 && mapx < map.width && mapy < map.height) {
+                    block := getBlock(mapx, mapy);
+                    blocked := blocks[block.block].blocking;
+                    if(blocked = false) {
+                        pc := array_find(player.party, p => { 
+                            if(p.pos != null) {
+                                return p.pos[0] = mapx && p.pos[1] = mapy && p.hp > 0;
+                            }
+                            return null;
+                        });
+                        blocked := pc != null;
+                    }
+                    if(blocked = false) {
+                        npc := array_find(map.npc, p => p.pos[0] = mapx && p.pos[1] = mapy);
+                        blocked := npc != null;
+                    }
+                    if(blocked = false) {
+                        m := array_find(map.monster, p => p.pos[0] = mapx && p.pos[1] = mapy);
+                        blocked := m != null;
+                    }
+                    if(blocked = false) {
+                        return [mapx, mapy];
+                    }
+                }
+                y := y + 1;
+            }
+            x := x + 1;
+        }
+        r := r + 1;
+    }
+    # give up
+    return [mx, my];
 }

@@ -12,8 +12,11 @@ def deathInput() {
         while(isKeyDown(KeySpace)) {
         }
         mode := "title";
+        erase("savegame.dat");
     }
     if(mode != "death") {
         MODES[mode].init();
+        MODES[mode].render();
+        updateVideo();
     }
 }

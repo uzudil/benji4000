@@ -13,7 +13,11 @@ def startCombat() {
         gameMode := COMBAT;        
         combat.roundCount := 0;
         array_foreach(player.party, (i, p) => {
-            p["pos"] := [ player.x, player.y ];
+            if(i = 0) {
+                p["pos"] := [player.x, player.y];
+            } else {
+                p["pos"] := findSpaceAround(player.x, player.y);
+            }
         });
         initCombatRound();
     }
@@ -26,6 +30,8 @@ def initCombatRound() {
         gameMode := MOVE;
         player.partyIndex := array_find_index(player.party, p => p.hp > 0);
         mode := "death";
+        MODES[mode].render();
+        updateVideo();
         return 0;
     }
     if(len(monsters) = 0) {
@@ -46,8 +52,6 @@ def initCombatRound() {
             "target": null,
             "path": [],
             "pathIndex": 0,
-            "pathDx": 0,
-            "pathDy": 0,
         }; 
     });
     array_foreach(player.party, (i, p) => { 
@@ -137,7 +141,7 @@ def runCombatTurn() {
 
                 combatRound.ap := combatRound.ap - apUsed;
 
-                sleep(500);
+                sleep(250);
                 renderGame();
                 updateVideo();
             }
@@ -200,12 +204,10 @@ def moveMonster() {
 
     moved := false;
     pathNode := combatRound.path[combatRound.pathIndex];
-    nx := pathNode.x + combatRound.pathDx;
-    ny := pathNode.y + combatRound.pathDy;
     #trace("At " + monster.pos[0] + "," + monster.pos[1] + " trying: " + nx + "," + ny);
-    if(canMoveTo(nx, ny)) {
-        monster.pos[0] := nx;
-        monster.pos[1] := ny;
+    if(canMoveTo(pathNode.x, pathNode.y)) {
+        monster.pos[0] := pathNode.x;
+        monster.pos[1] := pathNode.y;
         combatRound.pathIndex := combatRound.pathIndex + 1;
         moved := true;
         #trace("...yes");
@@ -259,6 +261,7 @@ def playerAttacks(monster) {
             }
             if(len(getLiveMonsters()) = 0) {
                 combatTurnEnd();
+                return 1;
             }
         }
         percent := monster.hp / monster.monsterTemplate.startHp;
@@ -297,7 +300,18 @@ def getMonsterPath() {
                 }
                 block := blocks[mapBlock.block];
                 blocked := block.blocking;
-                # todo: go around non-target players, npc-s, other monsters
+                if(blocked = false) {
+                    pc := array_find(player.party, p => p.pos[0] = mapx && p.pos[1] = mapy && p.hp > 0 && p.name != combatRound.target.name);
+                    blocked := pc != null;
+                }
+                if(blocked = false) {
+                    npc := array_find(map.npc, p => p.pos[0] = mapx && p.pos[1] = mapy);
+                    blocked := npc != null;
+                }
+                if(blocked = false) {
+                    m := array_find(map.monster, p => p.pos[0] = mapx && p.pos[1] = mapy && p.id != combatRound.monster.id);
+                    blocked := m != null;
+                }
                 info.grid[x][y] := newGridNode(x, y, blocked);
                 if(mapx = combatRound.monster.pos[0] && mapy = combatRound.monster.pos[1]) {
                     info.start := info.grid[x][y];
@@ -307,10 +321,19 @@ def getMonsterPath() {
                 }
             }
         );
-        #trace("Looking for path, from=" + info.start.pos + " to=" + info.end.pos);
-        combatRound.path := astarSearch(info.grid, info.start, info.end);        
-        combatRound.pathDx := combatRound.monster.pos[0] - info.start.x;
-        combatRound.pathDy := combatRound.monster.pos[1] - info.start.y;
+        if(info.start = null || info.end = null) {
+            return 1;
+        }
+        #trace("Looking for path, from=" + info.start + " to=" + info.end);
+        path := astarSearch(info.grid, info.start, info.end);   
+        dx := combatRound.monster.pos[0] - info.start.x;
+        dy := combatRound.monster.pos[1] - info.start.y;
+        combatRound.path := array_map(path, e => {
+            return {
+                "x": e.x + dx,
+                "y": e.y + dy,
+            };
+        });
         #trace("Found path=" + array_map(combatRound.path, p => p.pos));
         #trace("path delta=" + combatRound.pathDx + "," + combatRound.pathDy);
     }

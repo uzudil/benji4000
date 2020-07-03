@@ -39,12 +39,6 @@ def pageGameMessages() {
 }
 
 def gameMessage(message, color) {
-    if(player.messagePaging = false || moreText = false) {
-        while(len(player.messages) > MESSAGES_SIZE - 1) {
-            del player.messages[0];
-        }
-    }
-
     lines := splitGameMessage(message);
     t := 0;
     while(t < len(lines)) {
@@ -52,6 +46,11 @@ def gameMessage(message, color) {
         t := t + 1;
     }
     moreText := player.messagePaging && len(player.messages) > MESSAGES_SIZE;
+    if(player.messagePaging = false) {
+        while(len(player.messages) > MESSAGES_SIZE) {
+            del player.messages[0];
+        }   
+    }
 }
 
 def drawGameMessages(x, y) {

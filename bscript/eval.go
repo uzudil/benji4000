@@ -374,7 +374,7 @@ func (ctx *Context) printStack() {
 	fmt.Println("Runtime Call Stack:")
 	indent := "  "
 	for _, runtime := range ctx.RuntimeStack {
-		fmt.Println(fmt.Sprintf("%s%s at %s Vars=%s\n", indent, runtime.Function, runtime.Pos, runtime.Vars))
+		fmt.Println(fmt.Sprintf("%s%s at %s\n", indent, runtime.Function, runtime.Pos))
 		indent = indent + "  "
 	}
 }

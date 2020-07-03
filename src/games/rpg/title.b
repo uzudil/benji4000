@@ -2,6 +2,7 @@ titleMode := 0;
 savegameFound := null;
 
 def initTitle() {
+    titleMode := 0;
     savegameFound := load("savegame.dat");
 }
 

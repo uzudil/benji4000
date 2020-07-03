@@ -702,6 +702,21 @@ func fixArrays(data interface{}) {
 	}
 }
 
+func rmFile(ctx *Context, arg ...interface{}) (interface{}, error) {
+	if ctx.Sandbox == nil {
+		return nil, fmt.Errorf("Not running in a sandbox")
+	}
+	filename, ok := arg[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("First parameter is the filename")
+	}
+	err := checkFilename(filename)
+	if err != nil {
+		return nil, err
+	}
+	return nil, os.Remove(filepath.Join(*ctx.Sandbox, "files", filename))
+}
+
 func loadFile(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if ctx.Sandbox == nil {
 		return nil, fmt.Errorf("Not running in a sandbox")
@@ -970,6 +985,7 @@ func Builtins() map[string]Builtin {
 		"anyNonHelperKeyDown":  anyNonHelperKeyDown,
 		"save":                 saveFile,
 		"load":                 loadFile,
+		"erase":                rmFile,
 		"addBoundingBox":       addBoundingBox,
 		"getBoundingBox":       getBoundingBox,
 		"delBoundingBox":       delBoundingBox,

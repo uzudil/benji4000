@@ -105,4 +105,6 @@ blocks := [
     { "img": "rat" }, 
     { "img": "blood" }, 
     { "img": "skeleton" }, 
+    { "img": "bat" }, 
+    { "img": "books", "blocking": true, "light": false }, 
 ];

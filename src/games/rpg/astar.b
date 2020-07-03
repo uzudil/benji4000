@@ -143,16 +143,16 @@ def astarNeighbors(grid, node) {
     x := node.x;
     y := node.y;
 
-    if(grid[x-1] != null && grid[x-1][y] != null) {
+    if(x - 1 > 0) {
         ret[len(ret)] := grid[x-1][y];
     }
-    if(grid[x+1] != null && grid[x+1][y] != null) {
+    if(x + 1 < len(grid)) {
         ret[len(ret)] := grid[x+1][y];
     }
-    if(grid[x][y-1] != null && grid[x][y-1] != null) {
+    if(y - 1 > 0) {
         ret[len(ret)] := grid[x][y-1];
     }
-    if(grid[x][y+1] != null && grid[x][y+1] != null) {
+    if(y + 1 < len(grid[x])) {
         ret[len(ret)] := grid[x][y+1];
     }
     return ret;
