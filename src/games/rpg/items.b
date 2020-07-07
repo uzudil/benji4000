@@ -1,5 +1,6 @@
 const OBJECT_FOOD = "food";
 const OBJECT_DRINK = "drink";
+const OBJECT_POTION = "potion";
 const OBJECT_ARMOR = "armor";
 const OBJECT_WEAPON = "weapon";
 const OBJECT_SUPPLIES = "supplies";
@@ -114,6 +115,18 @@ const ITEMS = [
         "name": "Rope",
         "price": 4,
         "type": OBJECT_SUPPLIES,
+    },
+    {
+        "name": "Small round potion",
+        "price": 3,
+        "type": OBJECT_POTION,
+        "onAction": (self, pc) => gainHp(pc, 10),
+    },
+    {
+        "name": "Large round potion",
+        "price": 12,
+        "type": OBJECT_POTION,
+        "onAction": (self, pc) => gainHp(pc, 35),
     },
 ];
 

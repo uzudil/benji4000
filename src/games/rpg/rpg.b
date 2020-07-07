@@ -1,7 +1,9 @@
 def newChar(name, imgName) {
     return {
         "name": name,
+        "pos": [0, 0],
         "hp": 10,
+        "startHp": 10,
         "image": img[imgName],
         "exp": 0,
         "level": 1,
@@ -48,4 +50,8 @@ def gainExp(pc, amount) {
         pc.level := pc.level + 1;
         gameMessage(pc.name + " is now level " + pc.level + "!");
     }
+}
+
+def gainHp(pc, amount) {
+    pc.hp := min(pc.hp + amount, pc.startHp * pc.level);
 }

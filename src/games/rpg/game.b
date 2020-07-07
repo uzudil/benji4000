@@ -10,6 +10,7 @@ const COMBAT = 4;
 gameMode := MOVE;
 tradeMode := null;
 moreText := false;
+showCharSheet := false;
 
 convo := {
     "npc": null,
@@ -135,12 +136,8 @@ def drawUI() {
     drawRect(x, y, x + (320 - x - 5), 45, color);
     array_foreach(player.party, (i, p) => {
         color := COLOR_MID_GRAY;
-        if(gameMode = COMBAT) {
-            if(combat.round[combat.roundIndex].type = "pc") {
-                if(combat.round[combat.roundIndex].pc.index = i) {
-                    color := COLOR_YELLOW;
-                }
-            }
+        if(i = player.partyIndex) {
+            color := COLOR_YELLOW;
         }
         drawColoredText(x + 2, y + 2 + i * 10, color, COLOR_BLACK, substr(p.name, 0, 9));
         drawColoredText(x + 82, y + 2 + i * 10, color, COLOR_BLACK, "H" + p.hp);
@@ -194,6 +191,19 @@ def drawUI() {
             });
         }
     }
+
+    if(showCharSheet) {
+        pc := player.party[player.partyIndex];
+        drawText(10, 10, COLOR_WHITE, COLOR_BLACK, pc.name);
+        drawColoredText(10, 30, COLOR_MID_GRAY, COLOR_BLACK, "Level:" + pc.level + " Exp:" + pc.exp);
+        drawColoredText(10, 40, COLOR_MID_GRAY, COLOR_BLACK, "HP:" + pc.hp + "/" + (pc.startHp * pc.level));
+        drawColoredText(10, 60, COLOR_MID_GRAY, COLOR_BLACK, "STR:" + pc.str + " DEX:" + pc.dex);
+        drawColoredText(10, 70, COLOR_MID_GRAY, COLOR_BLACK, "SPD:" + pc.speed + " INT:" + pc.int);
+        drawColoredText(10, 80, COLOR_MID_GRAY, COLOR_BLACK, "WIS:" + pc.wis + " CHR:" + pc.cha);
+        drawColoredText(10, 90, COLOR_MID_GRAY, COLOR_BLACK, "LUCK:" + pc.luck);
+        drawColoredText(10, 110, COLOR_MID_GRAY, COLOR_BLACK, "C to return to game");
+        drawColoredText(10, 120, COLOR_MID_GRAY, COLOR_BLACK, "1-4 to see other pc");
+    }
 }
 
 def renderGame() {
@@ -202,7 +212,7 @@ def renderGame() {
     if(gameMode = MOVE) {        
         moveNpcs();
     }
-    if(tradeMode = null) {
+    if(tradeMode = null && showCharSheet = false) {
         mx := player.x;
         my := player.y;
         if(gameMode = COMBAT) {
@@ -561,12 +571,16 @@ def saveGame() {
 def showGameHelp() {
     clearGameMessages();
     gameMessageLong(true);
-    gameMessage("_1_Arrows: movement", COLOR_MID_GRAY);
+    gameMessage("_1_Arrows: movement/attack", COLOR_MID_GRAY);
     gameMessage("_1_H: help", COLOR_MID_GRAY);
+    gameMessage("_1_C: show character sheet", COLOR_MID_GRAY);
+    gameMessage("_1_U: use item", COLOR_MID_GRAY);
+    gameMessage("_1_E: change equipment", COLOR_MID_GRAY);
+    gameMessage("_1_I: party inventory", COLOR_MID_GRAY);
     gameMessage("_1_S: speak", COLOR_MID_GRAY);
     gameMessage("_1_Space: search/use door", COLOR_MID_GRAY);
     gameMessage("_1_Enter: use stairs/gate", COLOR_MID_GRAY);
-    gameMessage("_1_Numbers: option in conversation or trade", COLOR_MID_GRAY);
+    gameMessage("_1_Numbers: switch pc / option in conversation or trade", COLOR_MID_GRAY);
     gameMessageLong(false);
 }
 
@@ -600,6 +614,44 @@ def gameInput() {
             gameUseDoor();
             gameSearch();
             apUsed := apUsed + 1;
+        }
+        if(isKeyDown(KeyC)) {
+            while(isKeyDown(KeyC)) {
+            }
+            showCharSheet := showCharSheet = false;
+        }        
+        if(isKeyDown(KeyU)) {
+            while(isKeyDown(KeyU)) {
+            }
+            trace("Use item (like a potion)");
+        }
+        if(isKeyDown(KeyE)) {
+            while(isKeyDown(KeyE)) {
+            }
+            trace("Equip: don/doff");
+        }
+        if(isKeyDown(KeyI)) {
+            while(isKeyDown(KeyI)) {
+            }
+            trace("Party inventory");
+        }
+        if(gameMode != COMBAT) {
+            if(isKeyDown(Key1)) {
+                while(anyKeyDown()) {}
+                player.partyIndex := 0;
+            }
+            if(isKeyDown(Key2) && len(player.party) > 1) {
+                while(anyKeyDown()) {}
+                player.partyIndex := 1;
+            }
+            if(isKeyDown(Key3) && len(player.party) > 2) {
+                while(anyKeyDown()) {}
+                player.partyIndex := 2;
+            }
+            if(isKeyDown(Key4) && len(player.party) > 3) {
+                while(anyKeyDown()) {}
+                player.partyIndex := 3;
+            }
         }
         if(isKeyDown(KeyUp)) {
             player.y := player.y - 1;
@@ -644,9 +696,7 @@ def gameInput() {
                     pc.pos[0] := ox;
                     pc.pos[1] := oy;
                 }
-            }
 
-            if(gameMode = COMBAT) {
                 # trace("SAVING POS of " + player.partyIndex);
                 player.party[player.partyIndex].pos[0] := player.x;
                 player.party[player.partyIndex].pos[1] := player.y;

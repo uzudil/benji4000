@@ -85,7 +85,7 @@ const events_almoc = {
             return [ OBJECT_ARMOR, OBJECT_WEAPON ];
         }
         if(n.name = "Vinkh") {
-            return [ OBJECT_SUPPLIES ];
+            return [ OBJECT_SUPPLIES, OBJECT_POTION ];
         }
         return null;
     },
