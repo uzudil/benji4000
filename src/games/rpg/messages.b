@@ -45,8 +45,8 @@ def gameMessage(message, color) {
         player.messages[len(player.messages)] := [lines[t], color];
         t := t + 1;
     }
-    moreText := player.messagePaging && len(player.messages) > MESSAGES_SIZE;
-    if(player.messagePaging = false) {
+    moreText := gameMode = CONVO && len(player.messages) > MESSAGES_SIZE;
+    if(gameMode = CONVO = false) {
         while(len(player.messages) > MESSAGES_SIZE) {
             del player.messages[0];
         }   
@@ -71,8 +71,4 @@ def drawGameMessages(x, y) {
 def clearGameMessages() {
     player.messages := [];
     moreText := false;
-}
-
-def gameMessageLong(enabled) {
-    player.messagePaging := enabled;
 }

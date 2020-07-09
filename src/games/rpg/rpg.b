@@ -1,4 +1,12 @@
+const SLOTS = [
+    "head", "neck", "armor", "glove", "left", "right", "ring1", "ring2", "ranged", "cape"
+];
+
 def newChar(name, imgName) {
+    eq := {};
+    array_foreach(SLOTS, (s, slot) => {
+        eq[slot] := null;
+    });
     return {
         "name": name,
         "pos": [0, 0],
@@ -14,22 +22,7 @@ def newChar(name, imgName) {
         "wis": roll(15, 20),
         "cha": roll(15, 20),
         "luck": roll(15, 20),
-        "equipment": {
-            "head": null,
-            "neck": null,
-            "torso": null,
-            "arms": null,
-            "legs": null,
-            "hands": null,
-            "left": null,
-            "right": null,
-            "ring1": null,
-            "ring2": null,
-            "ring3": null,
-            "ring4": null,
-            "ranged": null,
-            "cape": null,
-        },
+        "equipment": eq,        
     };
 }
 

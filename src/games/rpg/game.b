@@ -8,15 +8,24 @@ const CONVO = 2;
 const TRADE = 3;
 const COMBAT = 4;
 gameMode := MOVE;
-tradeMode := null;
 moreText := false;
-showCharSheet := false;
+
+const CHAR_SHEET = 1;
+const INVENTORY = 2;
+const EQUIPMENT = 3;
+const BUY = 4;
+const SELL = 5;
+viewMode := null;
+
+equipmentPc := null;
+equipmentSlot := null;
 
 convo := {
     "npc": null,
     "map": null,
     "key": null,
     "answers": [],
+    "saleItems": [],
 };
 
 def initGame() {
@@ -41,7 +50,6 @@ def initGame() {
             "traders": {},
             "inventory": [],
             "coins": 10,
-            "messagePaging": false,
             "monster": {},
             "party": [],
             "partyIndex": 0,
@@ -117,102 +125,13 @@ def gameLoadMap(name) {
     });
 }
 
-def drawUI() {
-    clearVideo();
-
-    color := COLOR_DARK_BLUE;
-    if(gameMode = CONVO || gameMode = TRADE) {
-        color := COLOR_TEAL;
-    }
-    if(gameMode = COMBAT) {
-        color := COLOR_RED;
-    }
-
-    drawRect(4, 5, 5 + TILE_W * MAP_VIEW_W, 5 + TILE_H * MAP_VIEW_H, color);
-
-    # pc-s
-    x := 10 + TILE_W * MAP_VIEW_W;
-    y := 5;
-    drawRect(x, y, x + (320 - x - 5), 45, color);
-    array_foreach(player.party, (i, p) => {
-        color := COLOR_MID_GRAY;
-        if(i = player.partyIndex) {
-            color := COLOR_YELLOW;
-        }
-        drawColoredText(x + 2, y + 2 + i * 10, color, COLOR_BLACK, substr(p.name, 0, 9));
-        drawColoredText(x + 82, y + 2 + i * 10, color, COLOR_BLACK, "H" + p.hp);
-    });
-
-    # show AP
-    if(gameMode = COMBAT) {
-        if(combat.playerControl) {
-            apColor := COLOR_GREEN;
-        } else {
-            apColor := COLOR_MID_GRAY;
-        }
-        combatRound := combat.round[combat.roundIndex];
-        drawText(5, 10 + TILE_H * MAP_VIEW_H, apColor, COLOR_BLACK, "AP:");
-        fillRect(
-            30, 
-            12 + TILE_H * MAP_VIEW_H, 
-            30 + max(0, (combatRound.ap/10))*(TILE_W * MAP_VIEW_W - 30), 
-            15 + TILE_H * MAP_VIEW_H, 
-            apColor);
-    }
-
-    # party info
-    y := 50;
-    message_y := 81;
-    drawRect(x, y, x + (320 - x - 5), message_y - 5, color); 
-    drawColoredText(x + 5, y + 5, COLOR_MID_GRAY, COLOR_BLACK, "Coins _1_$" + player.coins);
-
-    # messages
-    y := message_y;
-    drawRect(x, y, x + (320 - x - 5), y + ((5 + TILE_H * MAP_VIEW_H) - y), color); 
-    drawGameMessages(x, message_y + 90);
-
-    # trading
-    if(gameMode = CONVO) {        
-        if(tradeMode = "_buy_") {
-            drawText(10, 10, COLOR_WHITE, COLOR_BLACK, "Inventory of " + convo.npc.name);
-            drawColoredText(10, 25, COLOR_MID_GRAY, COLOR_BLACK, "_7_1 Leave store");
-            array_foreach(player.traders[mapName][convo.npc.name], (i, item) => {
-                drawColoredText(10, 35 + i * 10, COLOR_MID_GRAY, COLOR_BLACK, 
-                    "_7_" + (i + 2) + " " + item.name + " " + "$" + ITEMS_BY_NAME[item.name].price);
-            });
-            
-        }
-        if(tradeMode = "_sell_") {
-            drawText(10, 10, COLOR_WHITE, COLOR_BLACK, "Party Inventory");
-            drawColoredText(10, 25, COLOR_MID_GRAY, COLOR_BLACK, "_7_1 Leave store");
-            array_foreach(player.inventory, (i, item) => {
-                drawColoredText(10, 35 + i * 10, COLOR_MID_GRAY, COLOR_BLACK, 
-                    "_7_" + (i + 2) + " " + item.name + " " + "$" + ITEMS_BY_NAME[item.name].sellPrice);
-            });
-        }
-    }
-
-    if(showCharSheet) {
-        pc := player.party[player.partyIndex];
-        drawText(10, 10, COLOR_WHITE, COLOR_BLACK, pc.name);
-        drawColoredText(10, 30, COLOR_MID_GRAY, COLOR_BLACK, "Level:" + pc.level + " Exp:" + pc.exp);
-        drawColoredText(10, 40, COLOR_MID_GRAY, COLOR_BLACK, "HP:" + pc.hp + "/" + (pc.startHp * pc.level));
-        drawColoredText(10, 60, COLOR_MID_GRAY, COLOR_BLACK, "STR:" + pc.str + " DEX:" + pc.dex);
-        drawColoredText(10, 70, COLOR_MID_GRAY, COLOR_BLACK, "SPD:" + pc.speed + " INT:" + pc.int);
-        drawColoredText(10, 80, COLOR_MID_GRAY, COLOR_BLACK, "WIS:" + pc.wis + " CHR:" + pc.cha);
-        drawColoredText(10, 90, COLOR_MID_GRAY, COLOR_BLACK, "LUCK:" + pc.luck);
-        drawColoredText(10, 110, COLOR_MID_GRAY, COLOR_BLACK, "C to return to game");
-        drawColoredText(10, 120, COLOR_MID_GRAY, COLOR_BLACK, "1-4 to see other pc");
-    }
-}
-
 def renderGame() {
     drawUI();
     initLight();
     if(gameMode = MOVE) {        
         moveNpcs();
     }
-    if(tradeMode = null && showCharSheet = false) {
+    if(viewMode = null) {
         mx := player.x;
         my := player.y;
         if(gameMode = COMBAT) {
@@ -483,7 +402,6 @@ def startConvo(theNpc, theConvoMap) {
     convo.key := "";
 
     clearGameMessages();
-    gameMessageLong(true);
     gameMessage("Talking to " + theNpc.name, COLOR_GREEN);
     showConvoText();
 }
@@ -494,18 +412,20 @@ def showConvoText() {
         "answers": [],
     };
     text := null;
-    tradeMode := null;
+    viewMode := null;
     if(convo.key = "_trade_") {
         text := "Do you want to $sell|_sell_ or $buy|_buy_?";
         result.answers[0] := [ "Bye", "bye" ];
     }
     if(convo.key = "_buy_") {
-        tradeMode := convo.key;
-        text := "Choose from my wares.";
+        viewMode := BUY;
+        text := "Browse my wares";
+        initBuyList();
     }
     if(convo.key = "_sell_") {
-        tradeMode := convo.key;
+        viewMode := SELL;
         text := "What do you want to sell?";
+        initSellList();
     }
     if(text = null) {
         text := convo.map[convo.key];
@@ -568,31 +488,21 @@ def saveGame() {
     save("savegame.dat", player);
 }
 
-def showGameHelp() {
-    clearGameMessages();
-    gameMessageLong(true);
-    gameMessage("_1_Arrows: movement/attack", COLOR_MID_GRAY);
-    gameMessage("_1_H: help", COLOR_MID_GRAY);
-    gameMessage("_1_C: show character sheet", COLOR_MID_GRAY);
-    gameMessage("_1_U: use item", COLOR_MID_GRAY);
-    gameMessage("_1_E: change equipment", COLOR_MID_GRAY);
-    gameMessage("_1_I: party inventory", COLOR_MID_GRAY);
-    gameMessage("_1_S: speak", COLOR_MID_GRAY);
-    gameMessage("_1_Space: search/use door", COLOR_MID_GRAY);
-    gameMessage("_1_Enter: use stairs/gate", COLOR_MID_GRAY);
-    gameMessage("_1_Numbers: switch pc / option in conversation or trade", COLOR_MID_GRAY);
-    gameMessageLong(false);
-}
-
 def gameInput() {
     if(isKeyDown(KeyH)) {
         while(anyKeyDown()) {}
         showGameHelp();
     }
-
     if(moreText && isKeyDown(KeySpace)) {
         while(anyKeyDown()) {}
         pageGameMessages();
+    }
+    if(isKeyDown(KeyEscape)) {
+        while(isKeyDown(KeyEscape)) {}
+        viewMode := null;
+        if(gameMode = CONVO) {
+            gameMode := MOVE;
+        }
     }
     if(gameMode = MOVE || (gameMode = COMBAT && combat.playerControl)) {
         apUsed := 0;
@@ -618,7 +528,7 @@ def gameInput() {
         if(isKeyDown(KeyC)) {
             while(isKeyDown(KeyC)) {
             }
-            showCharSheet := showCharSheet = false;
+            viewMode := CHAR_SHEET;
         }        
         if(isKeyDown(KeyU)) {
             while(isKeyDown(KeyU)) {
@@ -628,14 +538,18 @@ def gameInput() {
         if(isKeyDown(KeyE)) {
             while(isKeyDown(KeyE)) {
             }
-            trace("Equip: don/doff");
+            viewMode := EQUIPMENT;
+            setEquipmentList();
         }
         if(isKeyDown(KeyI)) {
             while(isKeyDown(KeyI)) {
             }
-            trace("Party inventory");
+            viewMode := INVENTORY;
+            list := array_map(player.inventory, item => item.name);
+            setListUi(list, []);
         }
         if(gameMode != COMBAT) {
+            oldPartyIndex := player.partyIndex;
             if(isKeyDown(Key1)) {
                 while(anyKeyDown()) {}
                 player.partyIndex := 0;
@@ -652,6 +566,9 @@ def gameInput() {
                 while(anyKeyDown()) {}
                 player.partyIndex := 3;
             }
+            if(oldPartyIndex != player.partyIndex && viewMode = EQUIPMENT) {
+                setEquipmentList();
+            }
         }
         if(isKeyDown(KeyUp)) {
             player.y := player.y - 1;
@@ -664,7 +581,7 @@ def gameInput() {
         }
         if(isKeyDown(KeyRight)) {
             player.x := player.x + 1;
-        }        
+        }
 
         blocked := player.x < 0 || player.y < 0 || player.x >= map.width || player.y >= map.height;
         if(blocked = false) {
@@ -710,6 +627,10 @@ def gameInput() {
         }
     }
 
+    if(viewMode != null) {
+        listUiInput();
+    }
+
     if(gameMode = CONVO) {
         index := null;
         if(isKeyDown(Key1) || isKeyDown(KeyEscape)) {
@@ -739,17 +660,10 @@ def gameInput() {
         if(index != null) {
             if(index = 0) {
                 gameMode := MOVE;
-                tradeMode := null;
+                viewMode := null;
                 gameMessage("Bye.", COLOR_MID_GRAY);
-                gameMessageLong(false);
             } else {
-                if(tradeMode = "_buy_") {
-                    buyItem(index - 1);
-                }
-                if(tradeMode = "_sell_") {
-                    sellItem(index - 1);
-                }
-                if(tradeMode = null) {
+                if(viewMode = null) {
                     if(len(convo.answers) > index) {
                         convo.key := convo.answers[index][1];
                         clearGameMessages();
@@ -761,7 +675,12 @@ def gameInput() {
     }
 }
 
-def buyItem(index) {
+def initBuyList() {
+    list := array_map(player.traders[mapName][convo.npc.name], item => item.name + " " + "$" + ITEMS_BY_NAME[item.name].price);
+    setListUi(list, [ [ KeyEnter, buyItem ] ]);
+}
+
+def buyItem(index, selection) {
     inv := player.traders[mapName][convo.npc.name];
     if(index < len(inv)) {
         item := ITEMS_BY_NAME[inv[index].name];
@@ -771,6 +690,7 @@ def buyItem(index) {
             player.inventory[len(player.inventory)] := itemInstance(item);
             del inv[index];
             saveGame();
+            initBuyList();
         } else {
             gameMessage("You don't have enough money to buy that.", COLOR_RED);
         }
@@ -779,14 +699,36 @@ def buyItem(index) {
     }
 }
 
-def sellItem(index) {
-    # todo: only show items of certain type
-    if(index < len(player.inventory)) {
-        item := itemInstance(player.inventory[index].name);
+def initSellList() {
+    # only show items the trader is interested in
+    convo.saleItems := player.inventory;
+    trace("inventory=" + player.inventory);
+    if(events[mapName]["onTrade"] != null) {
+        trade := events[mapName].onTrade(convo.npc);
+        trace("trade=" + trade);
+        if(trade != null) {
+            convo.saleItems := array_filter(convo.saleItems, item => {
+                itemTemplate := ITEMS_BY_NAME[item.name];
+                trace("item=" + itemTemplate.name + " type=" + itemTemplate.type);
+                return array_find(trade, t => t = itemTemplate.type) != null;
+            });            
+        }
+    }
+    trace("items for sale=" + convo.saleItems);
+    list := array_map(convo.saleItems, item => item.name + " " + "$" + ITEMS_BY_NAME[item.name].sellPrice);
+    setListUi(list, [ [ KeyEnter, sellItem ] ]);
+}
+
+def sellItem(index, selection) {
+    if(index < len(convo.saleItems)) {
+        item := ITEMS_BY_NAME[convo.saleItems[index].name];
         gameMessage("You sold " + item.name + " for $" + item.sellPrice + ".", COLOR_GREEN);
         player.coins := player.coins + item.sellPrice;
-        del player.inventory[index];
+        invIndex := array_find_index(player.inventory, inv => inv.name = item.name);
+        del player.inventory[invIndex];
+        del convo.saleItems[index];
         saveGame();
+        initSellList();
     } else {
         gameMessage("Invalid choice.", COLOR_MID_GRAY);
     }
@@ -834,4 +776,44 @@ def findSpaceAround(mx, my) {
     }
     # give up
     return [mx, my];
+}
+
+def setEquipmentList() {
+    equipmentPc := null;
+    equipmentSlot := null;
+    pc := player.party[player.partyIndex];
+    list := array_map(SLOTS, slot => {
+        if(pc.equipment[slot] = null) {
+            name := "";
+        } else {
+            name := pc.equipment[slot].name;
+        }
+        return slot + ": " + name;
+    });
+    setListUi(list, [ [ KeyEnter, donEquipment ], [ KeyD, doffEquipment ] ]);
+}
+
+def doffEquipment(index, selection) {
+    pc := player.party[player.partyIndex];
+    slot := SLOTS[index];
+    player.inventory[len(player.inventory)] := pc.equipment[slot];
+    pc.equipment[slot] := null;
+    saveGame();
+    setEquipmentList();
+}
+
+def donEquipment(index, selection) {
+    equipmentPc := player.party[player.partyIndex];
+    equipmentSlot := SLOTS[index];
+    setListUi(array_map(player.inventory, item => item.name), [ [ KeyEnter, donItem ] ]);
+}
+
+def donItem(index, selection) {
+    if(equipmentPc.equipment[equipmentSlot] != null) {
+        player.inventory[len(player.inventory)] := equipmentPc.equipment[equipmentSlot];
+    }
+    equipmentPc.equipment[equipmentSlot] := player.inventory[index];
+    del player.inventory[index];
+    saveGame();
+    setEquipmentList();    
 }
