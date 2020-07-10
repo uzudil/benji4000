@@ -1,18 +1,24 @@
 listUi := {
     "list": [],
+    "emptyMessage": "",
     "page": 0,
     "index": 0,
     "onSelect": null,
 };
 
-def setListUi(list, onSelect) {
+def setListUi(list, onSelect, emptyMessage) {
     listUi.list := list;
     listUi.onSelect := onSelect;
     listUi.page := 0;
     listUi.index := 0;
+    listUi.emptyMessage := emptyMessage;
 }
 
 def listUiInput() {
+    if(listUi.onSelect = null) {
+        return 1;
+    }
+
     if(isKeyDown(KeyDown) && listUi.index + listUi.page < len(listUi.list) - 1) {
         while(isKeyDown(KeyDown)) {}
         listUi.index := listUi.index + 1;
@@ -29,27 +35,33 @@ def listUiInput() {
             listUi.page := listUi.page - 10;
         }
     }
-    array_foreach(listUi.onSelect, (i, pair) => {
-        if(isKeyDown(pair[0])) {
-            while(isKeyDown(pair[0])) {}
-            idx := listUi.page + listUi.index;
-            fx := pair[1];
-            fx(idx, listUi.list[idx]);
-        }
-    });
+    if(len(listUi.list) > 0) {
+        array_foreach(listUi.onSelect, (i, pair) => {
+            if(isKeyDown(pair[0])) {
+                while(isKeyDown(pair[0])) {}
+                idx := listUi.page + listUi.index;
+                fx := pair[1];
+                fx(idx, listUi.list[idx]);
+            }
+        });
+    }
 }
 
 def drawListUi(x, y) {
-    i := 0;
-    while(listUi.page + i < len(listUi.list) && i < 10) {
-        fg := COLOR_MID_GRAY;
-        bg := COLOR_BLACK;
-        if(i = listUi.index) {
-            fg := COLOR_YELLOW;
-            bg := COLOR_MID_GRAY;
+    if(len(listUi.list) = 0) {
+        drawColoredText(x, y, COLOR_MID_GRAY, COLOR_BLACK, listUi.emptyMessage);
+    } else {
+        i := 0;
+        while(listUi.page + i < len(listUi.list) && i < 10) {
+            fg := COLOR_MID_GRAY;
+            bg := COLOR_BLACK;
+            if(i = listUi.index) {
+                fg := COLOR_YELLOW;
+                bg := COLOR_MID_GRAY;
+            }
+            drawColoredText(x, y + i * 10, fg, bg, listUi.list[listUi.page + i]);
+            i := i + 1;
         }
-        drawColoredText(x, y + i * 10, fg, bg, listUi.list[listUi.page + i]);
-        i := i + 1;
     }
 }
 
@@ -103,14 +115,22 @@ def drawTradeSell() {
 def drawCharSheet() {
     pc := player.party[player.partyIndex];
     drawText(10, 10, COLOR_WHITE, COLOR_BLACK, pc.name);
+
     drawColoredText(10, 30, COLOR_MID_GRAY, COLOR_BLACK, "Level:" + pc.level + " Exp:" + pc.exp);
     drawColoredText(10, 40, COLOR_MID_GRAY, COLOR_BLACK, "HP:" + pc.hp + "/" + (pc.startHp * pc.level));
-    drawColoredText(10, 60, COLOR_MID_GRAY, COLOR_BLACK, "STR:" + pc.str + " DEX:" + pc.dex);
-    drawColoredText(10, 70, COLOR_MID_GRAY, COLOR_BLACK, "SPD:" + pc.speed + " INT:" + pc.int);
-    drawColoredText(10, 80, COLOR_MID_GRAY, COLOR_BLACK, "WIS:" + pc.wis + " CHR:" + pc.cha);
-    drawColoredText(10, 90, COLOR_MID_GRAY, COLOR_BLACK, "LUCK:" + pc.luck);
-    drawColoredText(10, 110, COLOR_MID_GRAY, COLOR_BLACK, "Esc to return to game");
-    drawColoredText(10, 120, COLOR_MID_GRAY, COLOR_BLACK, "1-4 to see other pc");
+    drawColoredText(10, 50, COLOR_MID_GRAY, COLOR_BLACK, "Attack:" + array_join(array_reduce(pc.attack, [], (a, p) => {
+        a[len(a)] := "" + p[0] + "-" + p[1];
+        return a;
+    }), ","));
+    drawColoredText(10, 60, COLOR_MID_GRAY, COLOR_BLACK, "Armor:" + pc.armor);
+
+    drawColoredText(10, 80, COLOR_MID_GRAY, COLOR_BLACK, "STR:" + pc.str + " DEX:" + pc.dex);
+    drawColoredText(10, 90, COLOR_MID_GRAY, COLOR_BLACK, "SPD:" + pc.speed + " INT:" + pc.int);
+    drawColoredText(10, 100, COLOR_MID_GRAY, COLOR_BLACK, "WIS:" + pc.wis + " CHR:" + pc.cha);
+    drawColoredText(10, 110, COLOR_MID_GRAY, COLOR_BLACK, "LUCK:" + pc.luck);
+
+    drawColoredText(10, 130, COLOR_MID_GRAY, COLOR_BLACK, "Esc to return to game");
+    drawColoredText(10, 140, COLOR_MID_GRAY, COLOR_BLACK, "1-4 to see other pc");
 }
 
 def drawPartyInventory() {
@@ -123,7 +143,11 @@ def drawCharEquipment() {
     pc := player.party[player.partyIndex];
     drawColoredText(10, 10, COLOR_WHITE, COLOR_BLACK, "Equipment of _7_" + pc.name);
     drawListUi(10, 30);
-    drawText(10, 140, COLOR_MID_GRAY, COLOR_BLACK, "Esc to return to game");
+    if(equipmentSlot = null) {
+        drawText(10, 140, COLOR_MID_GRAY, COLOR_BLACK, "Esc to return to game");
+    } else {
+        drawText(10, 140, COLOR_MID_GRAY, COLOR_BLACK, "Esc to return");
+    }
     drawColoredText(10, 150, COLOR_MID_GRAY, COLOR_BLACK, "1-4 to see other pc");
     drawText(10, 160, COLOR_MID_GRAY, COLOR_BLACK, "Enter - equip");
     if(equipmentSlot = null) {
@@ -202,7 +226,7 @@ def drawUI() {
 
 def showGameHelp() {
     clearGameMessages();
-    gameMessageLong(true);
+    longMessage := true;
     gameMessage("_1_Arrows: movement/attack", COLOR_MID_GRAY);
     gameMessage("_1_H: help", COLOR_MID_GRAY);
     gameMessage("_1_C: show character sheet", COLOR_MID_GRAY);
@@ -213,5 +237,5 @@ def showGameHelp() {
     gameMessage("_1_Space: search/use door", COLOR_MID_GRAY);
     gameMessage("_1_Enter: use stairs/gate", COLOR_MID_GRAY);
     gameMessage("_1_Numbers: switch pc / option in conversation or trade", COLOR_MID_GRAY);
-    gameMessageLong(false);
+    longMessage := false;
 }

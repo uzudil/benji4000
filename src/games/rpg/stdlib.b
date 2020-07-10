@@ -8,6 +8,19 @@ def array_map(a, f) {
     return b;
 }
 
+def array_join(a, delim) {
+    s := "";
+    i := 0;
+    while(i < len(a)) {
+        if(i > 0) {
+            s := s + delim;
+        }
+        s := s + a[i];
+        i := i + 1;
+    }
+    return s;
+}
+
 def array_filter(a, f) {
     b := [];
     i := 0;
@@ -89,4 +102,24 @@ def array_reverse(array) {
         i := i - 1;
     }
     return ret;    
+}
+
+def array_reduce(array, value, fx) {
+    i := 0; 
+    while(i < len(array)) {
+        value := fx(value, array[i]);
+        i := i + 1;
+    }
+    return value;
+}
+
+def array_remove(array, fx) {
+    i := 0; 
+    while(i < len(array)) {
+        if(fx(array[i])) {
+            del array[i];
+        } else {
+            i := i + 1;
+        }
+    }
 }

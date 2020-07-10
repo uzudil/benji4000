@@ -19,6 +19,10 @@ viewMode := null;
 
 equipmentPc := null;
 equipmentSlot := null;
+equipmentSlotItems := [];
+
+const EFFECT_DAMAGE = 0;
+effect := null;
 
 convo := {
     "npc": null,
@@ -256,6 +260,11 @@ def gameDrawViewAt(x, y, mx, my, onScreen) {
             }
         }
     });
+    if(onScreen && effect != null) {
+        if(mx = effect.pos[0] && my = effect.pos[1]) {
+            drawEffect(x, y, mx, my, effect);
+        }
+    }
 }
 
 def moveNpcs() {
@@ -499,9 +508,14 @@ def gameInput() {
     }
     if(isKeyDown(KeyEscape)) {
         while(isKeyDown(KeyEscape)) {}
-        viewMode := null;
-        if(gameMode = CONVO) {
-            gameMode := MOVE;
+        if(equipmentSlot != null) {
+            equipmentSlot := null;
+            setEquipmentList();
+        } else {
+            viewMode := null;
+            if(gameMode = CONVO) {
+                gameMode := MOVE;
+            }
         }
     }
     if(gameMode = MOVE || (gameMode = COMBAT && combat.playerControl)) {
@@ -546,7 +560,7 @@ def gameInput() {
             }
             viewMode := INVENTORY;
             list := array_map(player.inventory, item => item.name);
-            setListUi(list, []);
+            setListUi(list, [], "Inventory is empty");
         }
         if(gameMode != COMBAT) {
             oldPartyIndex := player.partyIndex;
@@ -677,7 +691,7 @@ def gameInput() {
 
 def initBuyList() {
     list := array_map(player.traders[mapName][convo.npc.name], item => item.name + " " + "$" + ITEMS_BY_NAME[item.name].price);
-    setListUi(list, [ [ KeyEnter, buyItem ] ]);
+    setListUi(list, [ [ KeyEnter, buyItem ] ], "There is nothing to buy");
 }
 
 def buyItem(index, selection) {
@@ -716,7 +730,7 @@ def initSellList() {
     }
     trace("items for sale=" + convo.saleItems);
     list := array_map(convo.saleItems, item => item.name + " " + "$" + ITEMS_BY_NAME[item.name].sellPrice);
-    setListUi(list, [ [ KeyEnter, sellItem ] ]);
+    setListUi(list, [ [ KeyEnter, sellItem ] ], "You have nothing to sell");
 }
 
 def sellItem(index, selection) {
@@ -790,30 +804,81 @@ def setEquipmentList() {
         }
         return slot + ": " + name;
     });
-    setListUi(list, [ [ KeyEnter, donEquipment ], [ KeyD, doffEquipment ] ]);
+    setListUi(list, [ [ KeyEnter, donEquipment ], [ KeyD, doffEquipment ] ], "");
 }
 
 def doffEquipment(index, selection) {
     pc := player.party[player.partyIndex];
     slot := SLOTS[index];
-    player.inventory[len(player.inventory)] := pc.equipment[slot];
-    pc.equipment[slot] := null;
-    saveGame();
-    setEquipmentList();
+    if(pc.equipment[slot] != null) {
+        player.inventory[len(player.inventory)] := pc.equipment[slot];
+        pc.equipment[slot] := null;
+        calculateArmor(pc);
+        saveGame();
+        setEquipmentList();
+    }
 }
 
 def donEquipment(index, selection) {
     equipmentPc := player.party[player.partyIndex];
     equipmentSlot := SLOTS[index];
-    setListUi(array_map(player.inventory, item => item.name), [ [ KeyEnter, donItem ] ]);
+    equipmentSlotItems := array_filter(player.inventory, i => {
+        item := ITEMS_BY_NAME[i.name];
+        if(item["slot"] = null) {
+            return false;
+        }
+        if(typeof(item.slot) = "array") {
+            return array_find(item.slot, slot => equipmentSlot = slot) != null;
+        } else {
+            return equipmentSlot = item.slot;
+        }
+    });
+    setListUi(array_map(equipmentSlotItems, item => item.name), [ [ KeyEnter, donItem ] ], "No items for _7_" + equipmentSlot);
 }
 
 def donItem(index, selection) {
     if(equipmentPc.equipment[equipmentSlot] != null) {
         player.inventory[len(player.inventory)] := equipmentPc.equipment[equipmentSlot];
     }
-    equipmentPc.equipment[equipmentSlot] := player.inventory[index];
-    del player.inventory[index];
+    equipmentPc.equipment[equipmentSlot] := equipmentSlotItems[index];
+    inventoryIndex := array_find_index(player.inventory, invItem => invItem.name = equipmentSlotItems[index].name);
+    del player.inventory[inventoryIndex];
+    calculateArmor(equipmentPc);
     saveGame();
     setEquipmentList();    
+}
+
+def setMapEffect(mx, my, pos, effectName) {
+    now := getTicks();
+    effect := {
+        "pos": pos,
+        "effect": effectName,
+        "start": now,
+        "ttl": now + 0.2,
+    };
+    start := getTicks();
+    while(getTicks() < effect.ttl) {
+        drawView(mx, my);
+        updateVideo();
+    }
+    effect := null;
+    drawView(mx, my);
+    updateVideo();
+}
+
+def drawEffect(x, y, mx, my, effect) {
+    duration := effect.ttl - effect.start;
+    percent := (getTicks() - effect.start) / duration;
+    if(effect.effect = EFFECT_DAMAGE) {
+        color := COLOR_RED;
+        if(percent > 0.5) {
+            color := COLOR_YELLOW;
+        }
+        if(percent > 0.75) {
+            color := COLOR_WHITE;
+        }
+        drawCircle(x + TILE_W/2, y + TILE_W/2, (TILE_W/2) * percent, color);
+    } else {
+        trace("Don't know how to draw effect: " + effect.effect);
+    }
 }

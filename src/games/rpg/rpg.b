@@ -1,7 +1,3 @@
-const SLOTS = [
-    "head", "neck", "armor", "glove", "left", "right", "ring1", "ring2", "ranged", "cape"
-];
-
 def newChar(name, imgName) {
     eq := {};
     array_foreach(SLOTS, (s, slot) => {
@@ -15,6 +11,8 @@ def newChar(name, imgName) {
         "image": img[imgName],
         "exp": 0,
         "level": 1,
+        "attack": [],
+        "armor": 0,
         "str": roll(15, 20),
         "dex": roll(15, 20),
         "speed": roll(15, 20),
@@ -47,4 +45,27 @@ def gainExp(pc, amount) {
 
 def gainHp(pc, amount) {
     pc.hp := min(pc.hp + amount, pc.startHp * pc.level);
+}
+
+def calculateArmor(pc) {
+    invArmor := array_map(array_filter(SLOTS, slot => {
+        if(pc.equipment[slot] != null) {
+            return ITEMS_BY_NAME[pc.equipment[slot].name]["ac"] != null;
+        }
+        return false;
+    }), slot => pc.equipment[slot]);
+    pc.armor := array_reduce(invArmor, 0, (value, invItem) => {
+        return value + ITEMS_BY_NAME[invItem.name].ac;
+    });
+    invWeapons := getWeapons(pc);
+    pc.attack := array_map(invWeapons, invItem => ITEMS_BY_NAME[invItem.name].dam);
+}
+
+def getWeapons(pc) {
+    return array_map(array_filter(SLOTS, slot => {
+        if(pc.equipment[slot] != null) {
+            return ITEMS_BY_NAME[pc.equipment[slot].name]["dam"] != null;
+        }
+        return false;
+    }), slot => pc.equipment[slot]);
 }

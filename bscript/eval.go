@@ -825,23 +825,29 @@ func Load(source string, showAst *bool, ctx *Context) (interface{}, error) {
 
 func Run(source string, showAst *bool, ctx *Context, video *gfx.Gfx, sound *sound.Sound) (interface{}, error) {
 	// run it
+	fmt.Println("Loading...")
 	ast, err := load(source, showAst)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Loading done.")
 
+	fmt.Println("Initializing...")
 	ctx, err = ast.init(ctx, source)
 	if err != nil {
 		return nil, err
 	}
 	ctx.Video = video
 	ctx.Sound = sound
+	fmt.Println("Initializing done.")
 
+	fmt.Println("Running...")
 	value, err := ast.Evaluate(ctx)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		ctx.printStack()
 	}
+	fmt.Println("Run done.")
 	return value, err
 }
 
@@ -865,40 +871,48 @@ func (program *Program) init(ctx *Context, source string) (*Context, error) {
 	ctx.Program = program
 
 	if len(program.TopLevel) == 0 {
+		fmt.Printf("Program error: %v\n", err)
 		return ctx, nil
 	}
 
 	// define constants and globals
+	fmt.Printf("Finding constants and globals...\n")
 	for i := 0; i < len(program.TopLevel); i++ {
 		if program.TopLevel[i].Const != nil {
 			value, err := program.TopLevel[i].Const.Value.Evaluate(ctx)
 			if err != nil {
+				fmt.Printf("Consant error: %v\n", err)
 				return ctx, err
 			}
 			ctx.Consts[program.TopLevel[i].Const.Name] = value
 		} else if program.TopLevel[i].Let != nil {
 			_, err := program.TopLevel[i].Let.Evaluate(ctx)
 			if err != nil {
+				fmt.Printf("Global error: %v\n", err)
 				return ctx, err
 			}
 		}
 	}
 
 	// define functions
+	fmt.Printf("Finding functions...\n")
 	for i := 0; i < len(program.TopLevel); i++ {
 		if program.TopLevel[i].Fun != nil {
 			_, err := program.TopLevel[i].Fun.Evaluate(ctx)
 			if err != nil {
+				fmt.Printf("Function defition error: %v\n", err)
 				return ctx, err
 			}
 		}
 	}
 
+	fmt.Printf("Finding main...\n")
 	_, ok := ctx.Closure.Defs["main"]
 	if !ok {
 		return ctx, fmt.Errorf("no main function found")
 	}
 
+	fmt.Printf("Done.\n")
 	return ctx, nil
 }
 

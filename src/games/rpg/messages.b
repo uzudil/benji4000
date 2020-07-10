@@ -1,5 +1,6 @@
 const MESSAGES_WIDTH = 16;
 const MESSAGES_SIZE = 10;
+longMessage := false;
 
 def splitGameMessage(message) {
     words := split(message, " ");
@@ -39,14 +40,16 @@ def pageGameMessages() {
 }
 
 def gameMessage(message, color) {
+    #trace(message);
     lines := splitGameMessage(message);
     t := 0;
     while(t < len(lines)) {
         player.messages[len(player.messages)] := [lines[t], color];
         t := t + 1;
     }
-    moreText := gameMode = CONVO && len(player.messages) > MESSAGES_SIZE;
-    if(gameMode = CONVO = false) {
+    withPause := gameMode = CONVO || longMessage;
+    moreText := withPause && len(player.messages) > MESSAGES_SIZE;
+    if(withPause = false) {
         while(len(player.messages) > MESSAGES_SIZE) {
             del player.messages[0];
         }   

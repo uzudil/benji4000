@@ -271,15 +271,34 @@ def attackMonster(targetPc) {
     combatRound := combat.round[combat.roundIndex];
     monster := combatRound.monster;
     gameMessage(monster.monsterTemplate.name + " attacks " + targetPc.name + "!", COLOR_MID_GRAY);
+
+    # roll to-hit
+    toHit := roll(0, 20);
+    if(toHit <= targetPc.armor) {
+        gameMessage(monster.monsterTemplate.name + " misses.", COLOR_MID_GRAY);
+        return 1;
+    }
+
+    # roll damage
     dam := roll(monster.monsterTemplate.attack[0], monster.monsterTemplate.attack[1]);
     if(dam > 0) {
         gameMessage(targetPc.name + " takes " + dam + " damage!", COLOR_RED);
         targetPc.hp := max(targetPc.hp - dam, 0);
+        setMapEffect(monster.pos[0], monster.pos[1], targetPc.pos, EFFECT_DAMAGE);
         if(targetPc.hp = 0) {
             gameMessage(targetPc.name + " dies!", COLOR_RED);
             pc := array_filter(player.party, p => p.hp > 0);
             if(len(pc) = 0) {
                 combatTurnEnd();
+            } else {
+                # return dead pc-s equipment to pool so someone else can use it
+                array_foreach(SLOTS, (i, slot) => {
+                    if(targetPc.equipment[slot] != null) {
+                        player.inventory[len(player.inventory)] := targetPc.equipment[slot];
+                        targetPc.equipment[slot] := null;
+                    }
+                });
+                calculateArmor(targetPc);
             }
         }
     } else {
@@ -288,13 +307,37 @@ def attackMonster(targetPc) {
 }
 
 def playerAttacks(monster) {
-    # todo: use inventory to get attack numbers, range, defense, ap-cost, etc.
     combatRound := combat.round[combat.roundIndex];
-    gameMessage(combatRound.pc.name + " attacks " + monster.monsterTemplate.name + "!", COLOR_MID_GRAY);
-    dam := roll(0, 4);
+    invWeapons := getWeapons(combatRound.pc);
+    if(len(invWeapons) = 0) {
+        gameMessage(combatRound.pc.name + " attacks " + monster.monsterTemplate.name + " with bare hands!", COLOR_MID_GRAY);
+        playerAttachsDam(monster, [1, 2]);
+    } else {
+        array_foreach(invWeapons, (i, invItem) => {
+            item := ITEMS_BY_NAME[invItem.name];
+            gameMessage(combatRound.pc.name + " attacks " + monster.monsterTemplate.name + " with " + item.name + "!", COLOR_MID_GRAY);
+            playerAttachsDam(monster, item.dam);
+        });
+    }
+    return 3;
+}
+
+def playerAttachsDam(monster, damage) {
+    combatRound := combat.round[combat.roundIndex];
+
+    # roll to-hit
+    toHit := roll(0, 20);
+    if(toHit <= monster.monsterTemplate.armor) {
+        gameMessage(combatRound.pc.name + " misses.", COLOR_MID_GRAY);
+        return 1;
+    }
+
+    # roll damage
+    dam := roll(damage[0], damage[1]);
     if(dam > 0) {
         gameMessage(monster.monsterTemplate.name + " takes " + dam + " damage!", COLOR_RED);
         monster.hp := max(monster.hp - dam, 0);
+        setMapEffect(combatRound.pc.pos[0], combatRound.pc.pos[1], monster.pos, EFFECT_DAMAGE);
         if(monster.hp = 0) {
             exp := monster.monsterTemplate.level * 100;
             gainExp(combatRound.pc, roll(int(exp * 0.7), exp));
@@ -315,7 +358,6 @@ def playerAttacks(monster) {
     } else {
         gameMessage(combatRound.pc.name + " misses.", COLOR_MID_GRAY);
     }
-    return 3;
 }
 
 def findPath(monster, target) {
