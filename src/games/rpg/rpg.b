@@ -3,7 +3,7 @@ def newChar(name, imgName) {
     array_foreach(SLOTS, (s, slot) => {
         eq[slot] := null;
     });
-    return {
+    pc := {
         "name": name,
         "pos": [0, 0],
         "hp": 10,
@@ -22,6 +22,8 @@ def newChar(name, imgName) {
         "luck": roll(15, 20),
         "equipment": eq,        
     };
+    calculateArmor(pc);
+    return pc;
 }
 
 def getNextLevelExp(pc) {
@@ -39,7 +41,7 @@ def gainExp(pc, amount) {
     pc.exp := pc.exp + amount;    
     while(pc.exp >= getNextLevelExp(pc)) {
         pc.level := pc.level + 1;
-        gameMessage(pc.name + " is now level " + pc.level + "!");
+        gameMessage(pc.name + " is now level " + pc.level + "!", COLOR_GREEN);
     }
 }
 
@@ -48,17 +50,32 @@ def gainHp(pc, amount) {
 }
 
 def calculateArmor(pc) {
+    armorBonus := max(0, pc.dex - 15) + max(0, pc.speed - 17);
     invArmor := array_map(array_filter(SLOTS, slot => {
         if(pc.equipment[slot] != null) {
             return ITEMS_BY_NAME[pc.equipment[slot].name]["ac"] != null;
         }
         return false;
     }), slot => pc.equipment[slot]);
-    pc.armor := array_reduce(invArmor, 0, (value, invItem) => {
+    pc.armor := array_reduce(invArmor, armorBonus, (value, invItem) => {
         return value + ITEMS_BY_NAME[invItem.name].ac;
     });
+
+    attackBonus := int(pc.level / 2) + max(0, pc.str - 17) + max(0, pc.dex - 17);
     invWeapons := getWeapons(pc);
-    pc.attack := array_map(invWeapons, invItem => ITEMS_BY_NAME[invItem.name].dam);
+    pc.attack := array_map(invWeapons, invItem => {
+        dam := ITEMS_BY_NAME[invItem.name].dam;
+        return {
+            "dam": [dam[0] + attackBonus, dam[1] + attackBonus],
+            "weapon": invItem.name,
+        };
+    });
+    if(len(invWeapons) = 0) {
+        pc.attack := [ {
+            "dam": [attackBonus, attackBonus + 2],
+            "weapon": "Bare hands",
+        } ];
+    }
 }
 
 def getWeapons(pc) {

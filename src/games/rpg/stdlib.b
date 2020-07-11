@@ -77,7 +77,6 @@ def roll(minValue, maxValue) {
 
 # todo: make this more efficient
 def sort(array, fx) {
-    trace("sort before: " + array);
     i := 0;
     while(i < len(array)) {
         t := 0;
@@ -91,7 +90,6 @@ def sort(array, fx) {
         }
         i := i + 1;
     }
-    trace("sort after: " + array);
 }
 
 def array_reverse(array) {

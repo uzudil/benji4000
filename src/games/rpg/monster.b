@@ -8,6 +8,7 @@ MONSTERS := [
         "block": "rat",
         "startHp": 11,
         "level": 1,
+        "speed": 15, 
     },
     {
         "name": "Large Bat",
@@ -18,6 +19,7 @@ MONSTERS := [
         "block": "bat",
         "startHp": 8,
         "level": 1,
+        "speed": 14,
     },
     {
         "name": "Animated Skeleton",
@@ -28,5 +30,6 @@ MONSTERS := [
         "block": "skeleton",
         "startHp": 16,
         "level": 2,
+        "speed": 8,
     },
 ];

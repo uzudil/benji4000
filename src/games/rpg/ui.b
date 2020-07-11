@@ -119,7 +119,7 @@ def drawCharSheet() {
     drawColoredText(10, 30, COLOR_MID_GRAY, COLOR_BLACK, "Level:" + pc.level + " Exp:" + pc.exp);
     drawColoredText(10, 40, COLOR_MID_GRAY, COLOR_BLACK, "HP:" + pc.hp + "/" + (pc.startHp * pc.level));
     drawColoredText(10, 50, COLOR_MID_GRAY, COLOR_BLACK, "Attack:" + array_join(array_reduce(pc.attack, [], (a, p) => {
-        a[len(a)] := "" + p[0] + "-" + p[1];
+        a[len(a)] := "" + p.dam[0] + "-" + p.dam[1];
         return a;
     }), ","));
     drawColoredText(10, 60, COLOR_MID_GRAY, COLOR_BLACK, "Armor:" + pc.armor);

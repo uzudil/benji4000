@@ -41,18 +41,36 @@ def initCombatRound() {
             "target": null,
             "path": p.path,
             "pathIndex": 0,
+            "name": p.monsterTemplate.name,
         }; 
     });
     array_foreach(player.party, (i, p) => { 
         combat.round[len(combat.round)] := {
             "type": "pc",
             "pc": p,
-            "ap": 10
+            "ap": 10,
+            "name": p.name,
         };
     });
     
-    # todo: order by initiative
-    # sort(combat.round, (a,b) => { ... });
+    # order by initiative (speed, really)
+    sort(combat.round, (a,b) => {
+        if(a.type = "monster") {
+            aini := a.monster.monsterTemplate.speed;
+        } else {
+            aini := a.pc.speed;
+        }
+        if(b.type = "monster") {
+            bini := b.monster.monsterTemplate.speed;
+        } else {
+            bini := b.pc.speed;
+        }
+        if(aini < bini) {
+            return 1;
+        } else {
+            return -1;
+        }
+    });
 
     clearGameMessages();
     gameMessage("Beginning combat round " + combat.roundCount + "...", COLOR_RED);
@@ -114,21 +132,23 @@ def runCombatTurn() {
                     # target died
                     if(combatRound.target.hp <= 0) {
                         combatRound.target := null;
+                        combatRound.pathIndex := len(combatRound.path);
                     }
 
                     # if target moved: retarget
                     if(combatRound.target != null && len(combatRound.path) > 0) {
                         lastNode := combatRound.path[len(combatRound.path) - 1];
                         if(lastNode.x != combatRound.target.pos[0] || lastNode.y != combatRound.target.pos[1]) {
-                            #trace("target moved: retargeting");
-                            combatRound.path := findPath(monster, combatRound.target);
-                            combatRound.pathIndex := 0;
+                            combatRound.pathIndex := len(combatRound.path);
                         }
                     }
                 }
 
                 apUsed := 1;
                 near_pc := array_find(player.party, pc => {
+                    if(pc.hp <= 0) {
+                        return false;
+                    }
                     d := [
                         monster.pos[0] - pc.pos[0],
                         monster.pos[1] - pc.pos[1]
@@ -308,17 +328,10 @@ def attackMonster(targetPc) {
 
 def playerAttacks(monster) {
     combatRound := combat.round[combat.roundIndex];
-    invWeapons := getWeapons(combatRound.pc);
-    if(len(invWeapons) = 0) {
-        gameMessage(combatRound.pc.name + " attacks " + monster.monsterTemplate.name + " with bare hands!", COLOR_MID_GRAY);
-        playerAttachsDam(monster, [1, 2]);
-    } else {
-        array_foreach(invWeapons, (i, invItem) => {
-            item := ITEMS_BY_NAME[invItem.name];
-            gameMessage(combatRound.pc.name + " attacks " + monster.monsterTemplate.name + " with " + item.name + "!", COLOR_MID_GRAY);
-            playerAttachsDam(monster, item.dam);
-        });
-    }
+    array_foreach(combatRound.pc.attack, (i, attack) => {
+        gameMessage(combatRound.pc.name + " attacks " + monster.monsterTemplate.name + " with " + attack.weapon + "!", COLOR_MID_GRAY);
+        playerAttachsDam(monster, attack.dam);
+    });
     return 3;
 }
 
