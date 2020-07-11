@@ -42,7 +42,9 @@ def initCombatRound() {
             "path": p.path,
             "pathIndex": 0,
             "name": p.monsterTemplate.name,
-        }; 
+        };
+        # remove the original path after first use
+        p.path := []; 
     });
     array_foreach(player.party, (i, p) => { 
         combat.round[len(combat.round)] := {
