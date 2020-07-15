@@ -710,11 +710,23 @@ func rmFile(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("First parameter is the filename")
 	}
-	err := checkFilename(filename)
+
+	files, err := filepath.Glob(filepath.Join(*ctx.Sandbox, "files", filename))
 	if err != nil {
 		return nil, err
 	}
-	return nil, os.Remove(filepath.Join(*ctx.Sandbox, "files", filename))
+	for _, f := range files {
+		_, ff := filepath.Split(f)
+		err := checkFilename(ff)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Printf("Removing file: %s\n", ff)
+		if err := os.Remove(f); err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil
 }
 
 func loadFile(ctx *Context, arg ...interface{}) (interface{}, error) {
