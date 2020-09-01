@@ -885,6 +885,23 @@ func typeof(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, fmt.Errorf("%s Unknown variable type", ctx.Pos)
 }
 
+func distance(ctx *Context, arg ...interface{}) (interface{}, error) {
+	pos, err := floatArgs(ctx, 4, arg)
+	if err != nil {
+		return nil, err
+	}
+	ax := pos[0]
+	ay := pos[1]
+	bx := pos[2]
+	by := pos[3]
+	return math.Sqrt(((bx - ax) * (bx - ax)) + ((by - ay) * (by - ay))), nil
+}
+
+func exit(ctx *Context, arg ...interface{}) (interface{}, error) {
+	os.Exit(0)
+	return nil, nil
+}
+
 func assert(ctx *Context, arg ...interface{}) (interface{}, error) {
 	a := arg[0]
 	b := arg[1]
@@ -1012,6 +1029,8 @@ func Builtins() map[string]Builtin {
 		"limitFps":             limitFps,
 		"sleep":                sleep,
 		"typeof":               typeof,
+		"exit":                 exit,
+		"distance":             distance,
 	}
 }
 
