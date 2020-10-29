@@ -99,7 +99,7 @@ func input(ctx *Context, arg ...interface{}) (interface{}, error) {
 
 	var text strings.Builder
 	// start capturing input
-	ctx.Video.Render.StartInput <- 1
+	ctx.Video.Render.StartInput <- gfx.INPUT_MODE_ON
 
 	// block until input mode is over
 	for done := false; done != true; {
@@ -518,6 +518,27 @@ func isKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) {
 	gfx.KeyLock.Unlock()
 
 	return b, nil
+}
+
+func textInput(ctx *Context, arg ...interface{}) (interface{}, error) {
+	// start capturing input (just capture a single key)
+	ctx.Video.Render.StartInput <- gfx.INPUT_MODE_CHAR
+
+	// block until input mode is over
+	select {
+	case char := <-ctx.Video.Render.CharInput:
+		if char == 9 {
+			return "backspace", nil
+		} else if char == 27 {
+			return "escape", nil
+		}
+		// stop input mode and return char
+		var text strings.Builder
+		text.WriteRune(char)
+		return strings.TrimSpace(text.String()), nil
+	case <-ctx.Video.Render.StopInput:
+		return nil, nil
+	}
 }
 
 func fontIndex(ctx *Context, arg []interface{}) (int, error) {
@@ -969,6 +990,7 @@ func Builtins() map[string]Builtin {
 	return map[string]Builtin{
 		"print":                print,
 		"input":                input,
+		"textInput":            textInput,
 		"len":                  length,
 		"keys":                 keys,
 		"substr":               substr,

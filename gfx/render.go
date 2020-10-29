@@ -97,6 +97,10 @@ type SpriteCommand struct {
 	Pixels  [][]byte
 }
 
+const INPUT_MODE_OFF = 0
+const INPUT_MODE_ON = 1
+const INPUT_MODE_CHAR = 2
+
 type Render struct {
 	// the video memory
 	PixelMemory [Width * Height * 3]byte
@@ -112,7 +116,7 @@ type Render struct {
 	UpdateSprites bool
 
 	// input mode channels
-	InputMode     bool
+	InputMode     int
 	StartInput    chan int
 	StopInput     chan int
 	CharInput     chan rune
@@ -135,7 +139,7 @@ func NewRender(scale int, fullscreen bool) *Render {
 		Lock:          sync.Mutex{},
 		SpriteLock:    sync.Mutex{},
 		Fps:           60,
-		InputMode:     false,
+		InputMode:     INPUT_MODE_OFF,
 		StartInput:    make(chan int, 100),
 		StopInput:     make(chan int, 100),
 		CharInput:     make(chan rune, 1000),
@@ -181,19 +185,30 @@ func initGlfw(render *Render, scale int, fullscreen bool) *glfw.Window {
 
 	window.MakeContextCurrent()
 	window.SetCharCallback(func(w *glfw.Window, char rune) {
-		if render.InputMode {
+		if render.InputMode > INPUT_MODE_OFF {
 			render.CharInput <- char
+			if render.InputMode == INPUT_MODE_CHAR {
+				render.InputMode = INPUT_MODE_OFF
+			}
 		}
 	})
 	window.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
 		// fmt.Printf("Key pressed: %v, Action=%v, scancode=%d\n", key, action, scancode)
-		if render.InputMode {
+		if render.InputMode > INPUT_MODE_OFF {
 			if action == glfw.Release {
 				if key == glfw.KeyEnter {
 					render.StopInput <- 1
-					render.InputMode = false
+					render.InputMode = INPUT_MODE_OFF
+				} else if key == glfw.KeyEscape {
+					render.CharInput <- 27
+					if render.InputMode == INPUT_MODE_CHAR {
+						render.InputMode = INPUT_MODE_OFF
+					}
 				} else if key == glfw.KeyBackspace {
 					render.CharInput <- 9
+					if render.InputMode == INPUT_MODE_CHAR {
+						render.InputMode = INPUT_MODE_OFF
+					}
 				}
 			}
 		}
@@ -380,8 +395,8 @@ func (render *Render) MainLoop() {
 
 		// are we in capture input mode?
 		select {
-		case <-render.StartInput:
-			render.InputMode = true
+		case n := <-render.StartInput:
+			render.InputMode = n
 		case spriteCommand := <-render.SpriteChannel:
 			render.runSpriteCommand(spriteCommand)
 		default:
