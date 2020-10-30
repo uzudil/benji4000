@@ -630,6 +630,27 @@ func checkFilename(filename string) error {
 	return nil
 }
 
+func getDir(ctx *Context, homeDirName string, create bool) (string, error) {
+	var dir string
+	if homeDirName != "" {
+		err := checkFilename(homeDirName)
+		if err != nil {
+			return "", err
+		}
+		userHomeDir, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		dir = filepath.Join(userHomeDir, homeDirName)
+	} else {
+		dir = filepath.Join(*ctx.Sandbox, "files")
+	}
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		os.Mkdir(dir, os.ModePerm)
+	}
+	return dir, nil
+}
+
 func saveFile(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if ctx.Sandbox == nil {
 		return nil, fmt.Errorf("Not running in a sandbox")
@@ -650,11 +671,18 @@ func saveFile(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	dir := filepath.Join(*ctx.Sandbox, "files")
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		os.Mkdir(dir, os.ModePerm)
+	homeDirName := ""
+	if len(arg) > 2 {
+		homeDirName, ok = arg[2].(string)
+		if !ok {
+			return nil, fmt.Errorf("third param should be a directory name")
+		}
 	}
-	return nil, ioutil.WriteFile(filepath.Join(*ctx.Sandbox, "files", filename), []byte(jsonstr), 0644)
+	dir, err := getDir(ctx, homeDirName, true)
+	if err != nil {
+		return nil, err
+	}
+	return nil, ioutil.WriteFile(filepath.Join(dir, filename), []byte(jsonstr), 0644)
 }
 
 // Images need extra processing. Look for images in the loaded data...
@@ -732,7 +760,19 @@ func rmFile(ctx *Context, arg ...interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("First parameter is the filename")
 	}
 
-	files, err := filepath.Glob(filepath.Join(*ctx.Sandbox, "files", filename))
+	homeDirName := ""
+	if len(arg) > 1 {
+		homeDirName, ok = arg[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("second param should be a directory name")
+		}
+	}
+	dir, err := getDir(ctx, homeDirName, false)
+	if err != nil {
+		return nil, err
+	}
+
+	files, err := filepath.Glob(filepath.Join(dir, filename))
 	if err != nil {
 		return nil, err
 	}
@@ -762,12 +802,21 @@ func loadFile(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	bytes, err := ioutil.ReadFile(filepath.Join(*ctx.Sandbox, "files", filename))
-	if err != nil {
-		bytes, err = ioutil.ReadFile(filepath.Join(*ctx.Sandbox, filename))
-		if err != nil {
-			return nil, nil
+	homeDirName := ""
+	if len(arg) > 1 {
+		homeDirName, ok = arg[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("second param should be a directory name")
 		}
+	}
+	dir, err := getDir(ctx, homeDirName, false)
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := ioutil.ReadFile(filepath.Join(dir, filename))
+	if err != nil {
+		// return nil not error: file missing is not an error
+		return nil, nil
 	}
 	data := map[string]interface{}{}
 	err = json.Unmarshal(bytes, &data)
