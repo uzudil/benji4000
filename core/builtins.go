@@ -1,4 +1,4 @@
-package bscript
+package core
 
 import (
 	"encoding/base64"
@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -17,9 +16,10 @@ import (
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"github.com/uzudil/benji4000/gfx"
 	"github.com/uzudil/benji4000/sound"
+	"github.com/uzudil/bscript/bscript"
 )
 
-func floatArgs(ctx *Context, count int, arg []interface{}) ([]float64, error) {
+func floatArgs(ctx *bscript.Context, count int, arg []interface{}) ([]float64, error) {
 	if len(arg) < count {
 		return nil, fmt.Errorf("%s Wrong number of arguments. Got %d instead of %d", ctx.Pos, count, len(arg))
 	}
@@ -34,7 +34,7 @@ func floatArgs(ctx *Context, count int, arg []interface{}) ([]float64, error) {
 	return r, nil
 }
 
-func intArgs(ctx *Context, count int, arg []interface{}) ([]int, error) {
+func intArgs(ctx *bscript.Context, count int, arg []interface{}) ([]int, error) {
 	f, err := floatArgs(ctx, count, arg)
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func intArgs(ctx *Context, count int, arg []interface{}) ([]int, error) {
 	return r, nil
 }
 
-func stringArgs(ctx *Context, count int, arg []interface{}) ([]string, error) {
+func stringArgs(ctx *bscript.Context, count int, arg []interface{}) ([]string, error) {
 	if len(arg) < count {
 		return nil, fmt.Errorf("%s Wrong number of arguments. Got %d instead of %d", ctx.Pos, count, len(arg))
 	}
@@ -61,26 +61,26 @@ func stringArgs(ctx *Context, count int, arg []interface{}) ([]string, error) {
 	return r, nil
 }
 
-func video(ctx *Context) *gfx.Gfx {
+func video(ctx *bscript.Context) *gfx.Gfx {
 	return ctx.App["video"].(*gfx.Gfx)
 }
 
-func audio(ctx *Context) *sound.Sound {
+func audio(ctx *bscript.Context) *sound.Sound {
 	return ctx.App["sound"].(*sound.Sound)
 }
 
-func print(ctx *Context, arg ...interface{}) (interface{}, error) {
-	video(ctx).Println(EvalString(arg[0]), true)
+func print(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
+	video(ctx).Println(bscript.EvalString(arg[0]), true)
 	video(ctx).UpdateVideo()
 	return nil, nil
 }
 
-func trace(ctx *Context, arg ...interface{}) (interface{}, error) {
-	fmt.Println(EvalString(arg[0]))
+func trace(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
+	fmt.Println(bscript.EvalString(arg[0]))
 	return nil, nil
 }
 
-func sleep(ctx *Context, arg ...interface{}) (interface{}, error) {
+func sleep(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	ms, err := intArgs(ctx, 1, arg)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func sleep(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, nil
 }
 
-func limitFps(ctx *Context, arg ...interface{}) (interface{}, error) {
+func limitFps(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	fps, err := floatArgs(ctx, 1, arg)
 	if err != nil {
 		return nil, err
@@ -98,12 +98,12 @@ func limitFps(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, nil
 }
 
-func getTicks(ctx *Context, arg ...interface{}) (interface{}, error) {
+func getTicks(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	return video(ctx).Render.GetTicks(), nil
 }
 
-func input(ctx *Context, arg ...interface{}) (interface{}, error) {
-	video(ctx).Println(EvalString(arg[0]), false)
+func input(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
+	video(ctx).Println(bscript.EvalString(arg[0]), false)
 	video(ctx).UpdateVideo()
 
 	var text strings.Builder
@@ -140,7 +140,7 @@ func input(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return strings.TrimSpace(text.String()), nil
 }
 
-func length(ctx *Context, arg ...interface{}) (interface{}, error) {
+func length(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	a, ok := arg[0].(*[]interface{})
 	if !ok {
 		s, ok := arg[0].(string)
@@ -152,7 +152,7 @@ func length(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return float64(len(*a)), nil
 }
 
-func split(ctx *Context, arg ...interface{}) (interface{}, error) {
+func split(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	s, ok := arg[0].(string)
 	if !ok {
 		return nil, fmt.Errorf("%s argument 1 should be a string", ctx.Pos)
@@ -170,7 +170,7 @@ func split(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return &arr, nil
 }
 
-func substr(ctx *Context, arg ...interface{}) (interface{}, error) {
+func substr(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	s, ok := arg[0].(string)
 	if !ok {
 		return nil, fmt.Errorf("%s argument 1 to substr() should be a string", ctx.Pos)
@@ -192,7 +192,7 @@ func substr(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return string(s[start:end]), nil
 }
 
-func replace(ctx *Context, arg ...interface{}) (interface{}, error) {
+func replace(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	s, err := stringArgs(ctx, 3, arg)
 	if err != nil {
 		return nil, err
@@ -200,7 +200,7 @@ func replace(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return strings.ReplaceAll(s[0], s[1], s[2]), nil
 }
 
-func keys(ctx *Context, arg ...interface{}) (interface{}, error) {
+func keys(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	m, ok := arg[0].(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("argument to key() should be a map")
@@ -214,7 +214,7 @@ func keys(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return &keys, nil
 }
 
-func setVideoMode(ctx *Context, arg ...interface{}) (interface{}, error) {
+func setVideoMode(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	mode, ok := arg[0].(float64)
 	if !ok {
 		return nil, fmt.Errorf("First parameter should be the number of the video mode")
@@ -226,7 +226,7 @@ func setVideoMode(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, nil
 }
 
-func scroll(ctx *Context, arg ...interface{}) (interface{}, error) {
+func scroll(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 2, arg)
 	if err != nil {
 		return nil, err
@@ -235,7 +235,7 @@ func scroll(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, nil
 }
 
-func setPixel(ctx *Context, arg ...interface{}) (interface{}, error) {
+func setPixel(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 3, arg)
 	if err != nil {
 		return nil, err
@@ -243,7 +243,7 @@ func setPixel(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).SetPixel(i[0], i[1], uint8(i[2]))
 }
 
-func drawText(ctx *Context, arg ...interface{}) (interface{}, error) {
+func drawText(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 4, arg)
 	if err != nil {
 		return nil, err
@@ -255,7 +255,7 @@ func drawText(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).DrawText(i[0], i[1], text, uint8(i[2]), uint8(i[3]))
 }
 
-func drawFont(ctx *Context, arg ...interface{}) (interface{}, error) {
+func drawFont(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	f, err := floatArgs(ctx, 4, arg)
 	if err != nil {
 		return nil, err
@@ -267,7 +267,7 @@ func drawFont(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).DrawFont(int(f[0]), int(f[1]), rune(ch), uint8(f[2]), uint8(f[3]))
 }
 
-func drawLine(ctx *Context, arg ...interface{}) (interface{}, error) {
+func drawLine(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 5, arg)
 	if err != nil {
 		return nil, err
@@ -275,7 +275,7 @@ func drawLine(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).DrawLine(i[0], i[1], i[2], i[3], uint8(i[4]))
 }
 
-func drawCircle(ctx *Context, arg ...interface{}) (interface{}, error) {
+func drawCircle(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 4, arg)
 	if err != nil {
 		return nil, err
@@ -283,7 +283,7 @@ func drawCircle(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).DrawCircle(i[0], i[1], i[2], uint8(i[3]))
 }
 
-func fillCircle(ctx *Context, arg ...interface{}) (interface{}, error) {
+func fillCircle(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 4, arg)
 	if err != nil {
 		return nil, err
@@ -291,7 +291,7 @@ func fillCircle(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).FillCircle(i[0], i[1], i[2], uint8(i[3]))
 }
 
-func setBackground(ctx *Context, arg ...interface{}) (interface{}, error) {
+func setBackground(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	c, ok := arg[0].(float64)
 	if !ok {
 		return nil, fmt.Errorf("First parameter should be a number")
@@ -300,7 +300,7 @@ func setBackground(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, nil
 }
 
-func fillRect(ctx *Context, arg ...interface{}) (interface{}, error) {
+func fillRect(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 5, arg)
 	if err != nil {
 		return nil, err
@@ -308,7 +308,7 @@ func fillRect(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).FillRect(i[0], i[1], i[2], i[3], uint8(i[4]))
 }
 
-func drawRect(ctx *Context, arg ...interface{}) (interface{}, error) {
+func drawRect(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 5, arg)
 	if err != nil {
 		return nil, err
@@ -316,7 +316,7 @@ func drawRect(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).DrawRect(i[0], i[1], i[2], i[3], uint8(i[4]))
 }
 
-func getImage(ctx *Context, arg ...interface{}) (interface{}, error) {
+func getImage(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 4, arg)
 	if err != nil {
 		return nil, err
@@ -324,7 +324,7 @@ func getImage(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return video(ctx).GetImage(i[0], i[1], i[2], i[3])
 }
 
-func drawImage(ctx *Context, arg ...interface{}) (interface{}, error) {
+func drawImage(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 2, arg)
 	if err != nil {
 		return nil, err
@@ -336,7 +336,7 @@ func drawImage(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).DrawImage(i[0], i[1], img, 0, 0, 0)
 }
 
-func drawImageRot(ctx *Context, arg ...interface{}) (interface{}, error) {
+func drawImageRot(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 5, arg)
 	if err != nil {
 		return nil, err
@@ -348,7 +348,7 @@ func drawImageRot(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).DrawImage(i[0], i[1], img, i[2], i[3], i[4])
 }
 
-func getImageWidth(ctx *Context, arg ...interface{}) (interface{}, error) {
+func getImageWidth(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	img, ok := arg[0].(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("First argument should be an image")
@@ -356,7 +356,7 @@ func getImageWidth(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return float64(img["width"].(int)), nil
 }
 
-func getImageHeight(ctx *Context, arg ...interface{}) (interface{}, error) {
+func getImageHeight(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	img, ok := arg[0].(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("First argument should be an image")
@@ -364,7 +364,7 @@ func getImageHeight(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return float64(img["height"].(int)), nil
 }
 
-func setSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
+func setSprite(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	index, ok := arg[0].(float64)
 	if !ok {
 		return nil, fmt.Errorf("First argument should be a number")
@@ -384,7 +384,7 @@ func setSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).SetSprite(int(index), imgs)
 }
 
-func delSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
+func delSprite(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	index, ok := arg[0].(float64)
 	if !ok {
 		return nil, fmt.Errorf("First argument should be a number")
@@ -392,7 +392,7 @@ func delSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).DelSprite(int(index))
 }
 
-func drawSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
+func drawSprite(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 6, arg)
 	if err != nil {
 		return nil, err
@@ -400,7 +400,7 @@ func drawSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).DrawSprite(i[0], i[1], i[2], i[3], i[4], i[5])
 }
 
-func checkSpriteCollision(ctx *Context, arg ...interface{}) (interface{}, error) {
+func checkSpriteCollision(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 2, arg)
 	if err != nil {
 		return nil, err
@@ -408,7 +408,7 @@ func checkSpriteCollision(ctx *Context, arg ...interface{}) (interface{}, error)
 	return video(ctx).CheckSpriteCollision(i[0], i[1])
 }
 
-func flood(ctx *Context, arg ...interface{}) (interface{}, error) {
+func flood(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	i, err := intArgs(ctx, 3, arg)
 	if err != nil {
 		return nil, err
@@ -416,11 +416,11 @@ func flood(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).FloodFill(i[0], i[1], uint8(i[2]))
 }
 
-func clearVideo(ctx *Context, arg ...interface{}) (interface{}, error) {
+func clearVideo(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).ClearVideo()
 }
 
-func updateVideo(ctx *Context, arg ...interface{}) (interface{}, error) {
+func updateVideo(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	if video(ctx) == nil {
 		panic("Video card not initialized")
 	}
@@ -428,20 +428,7 @@ func updateVideo(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).UpdateVideo()
 }
 
-func random(ctx *Context, arg ...interface{}) (interface{}, error) {
-	return rand.Float64(), nil
-}
-
-func debug(ctx *Context, arg ...interface{}) (interface{}, error) {
-	message, ok := arg[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("argument to debug() should be a string")
-	}
-	ctx.debug(message)
-	return nil, nil
-}
-
-func toAbs(ctx *Context, arg ...interface{}) (interface{}, error) {
+func toAbs(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	n, ok := arg[0].(float64)
 	if !ok {
 		return nil, fmt.Errorf("First argument should be a number")
@@ -449,7 +436,7 @@ func toAbs(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return math.Abs(n), nil
 }
 
-func toMax(ctx *Context, arg ...interface{}) (interface{}, error) {
+func toMax(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	f, err := floatArgs(ctx, 2, arg)
 	if err != nil {
 		return nil, err
@@ -457,7 +444,7 @@ func toMax(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return math.Max(f[0], f[1]), nil
 }
 
-func toMin(ctx *Context, arg ...interface{}) (interface{}, error) {
+func toMin(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	f, err := floatArgs(ctx, 2, arg)
 	if err != nil {
 		return nil, err
@@ -465,7 +452,7 @@ func toMin(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return math.Min(f[0], f[1]), nil
 }
 
-func toInt(ctx *Context, arg ...interface{}) (interface{}, error) {
+func toInt(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	n, ok := arg[0].(float64)
 	if !ok {
 		s, ok := arg[0].(string)
@@ -481,7 +468,7 @@ func toInt(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return float64(int(n)), nil
 }
 
-func toRound(ctx *Context, arg ...interface{}) (interface{}, error) {
+func toRound(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	n, ok := arg[0].(float64)
 	if !ok {
 		return nil, fmt.Errorf("First argument should be a number")
@@ -489,7 +476,7 @@ func toRound(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return float64(int(n)), nil
 }
 
-func anyKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) {
+func anyKeyDown(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	gfx.KeyLock.Lock()
 	b := false
 	for _, v := range gfx.KeyDown {
@@ -502,7 +489,7 @@ func anyKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return b, nil
 }
 
-func anyNonHelperKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) {
+func anyNonHelperKeyDown(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	gfx.KeyLock.Lock()
 	b := false
 	for k, v := range gfx.KeyDown {
@@ -515,7 +502,7 @@ func anyNonHelperKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) 
 	return b, nil
 }
 
-func isKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) {
+func isKeyDown(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	key, ok := arg[0].(float64)
 	if !ok {
 		return nil, fmt.Errorf("First argument should be a number")
@@ -529,7 +516,7 @@ func isKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return b, nil
 }
 
-func textInput(ctx *Context, arg ...interface{}) (interface{}, error) {
+func textInput(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	// start capturing input (just capture a single key)
 	video(ctx).Render.StartInput <- gfx.INPUT_MODE_CHAR
 
@@ -550,7 +537,7 @@ func textInput(ctx *Context, arg ...interface{}) (interface{}, error) {
 	}
 }
 
-func fontIndex(ctx *Context, arg []interface{}) (int, error) {
+func fontIndex(ctx *bscript.Context, arg []interface{}) (int, error) {
 	// Font *[512][8]uint8
 	f, ok := arg[0].(float64)
 	if !ok {
@@ -563,7 +550,7 @@ func fontIndex(ctx *Context, arg []interface{}) (int, error) {
 	return index, nil
 }
 
-func getFont(ctx *Context, arg ...interface{}) (interface{}, error) {
+func getFont(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	index, err := fontIndex(ctx, arg)
 	if err != nil {
 		return nil, err
@@ -575,7 +562,7 @@ func getFont(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return font, nil
 }
 
-func setFont(ctx *Context, arg ...interface{}) (interface{}, error) {
+func setFont(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	index, err := fontIndex(ctx, arg)
 	if err != nil {
 		return nil, err
@@ -601,7 +588,7 @@ func setFont(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, nil
 }
 
-func getColor(ctx *Context, arg ...interface{}) (interface{}, error) {
+func getColor(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	f, ok := arg[0].(float64)
 	if !ok {
 		return 0, fmt.Errorf("%s first arg should be a number (%v)", ctx.Pos, arg[0])
@@ -617,7 +604,7 @@ func getColor(ctx *Context, arg ...interface{}) (interface{}, error) {
 	}, nil
 }
 
-func setColor(ctx *Context, arg ...interface{}) (interface{}, error) {
+func setColor(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	a, err := intArgs(ctx, 4, arg)
 	if err != nil {
 		return nil, err
@@ -639,7 +626,7 @@ func checkFilename(filename string) error {
 	return nil
 }
 
-func getDir(ctx *Context, homeDirName string, create bool) (string, error) {
+func getDir(ctx *bscript.Context, homeDirName string, create bool) (string, error) {
 	var dir string
 	if homeDirName != "" {
 		err := checkFilename(homeDirName)
@@ -660,7 +647,7 @@ func getDir(ctx *Context, homeDirName string, create bool) (string, error) {
 	return dir, nil
 }
 
-func saveFile(ctx *Context, arg ...interface{}) (interface{}, error) {
+func saveFile(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	if ctx.Sandbox == nil {
 		return nil, fmt.Errorf("Not running in a sandbox")
 	}
@@ -760,7 +747,7 @@ func fixArrays(data interface{}) {
 	}
 }
 
-func rmFile(ctx *Context, arg ...interface{}) (interface{}, error) {
+func rmFile(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	if ctx.Sandbox == nil {
 		return nil, fmt.Errorf("Not running in a sandbox")
 	}
@@ -799,7 +786,7 @@ func rmFile(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, nil
 }
 
-func loadFile(ctx *Context, arg ...interface{}) (interface{}, error) {
+func loadFile(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	if ctx.Sandbox == nil {
 		return nil, fmt.Errorf("Not running in a sandbox")
 	}
@@ -837,7 +824,7 @@ func loadFile(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return data, nil
 }
 
-func addBoundingBox(ctx *Context, arg ...interface{}) (interface{}, error) {
+func addBoundingBox(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	a, err := intArgs(ctx, 5, arg)
 	if err != nil {
 		return nil, err
@@ -846,7 +833,7 @@ func addBoundingBox(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return float64(index), err
 }
 
-func getBoundingBox(ctx *Context, arg ...interface{}) (interface{}, error) {
+func getBoundingBox(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	a, err := intArgs(ctx, 2, arg)
 	if err != nil {
 		return nil, err
@@ -860,7 +847,7 @@ func getBoundingBox(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return &r, err
 }
 
-func delBoundingBox(ctx *Context, arg ...interface{}) (interface{}, error) {
+func delBoundingBox(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	a, err := intArgs(ctx, 2, arg)
 	if err != nil {
 		return nil, err
@@ -868,7 +855,7 @@ func delBoundingBox(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).DelBoundingBox(a[0], a[1])
 }
 
-func clearBoundingBoxes(ctx *Context, arg ...interface{}) (interface{}, error) {
+func clearBoundingBoxes(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	a, err := intArgs(ctx, 1, arg)
 	if err != nil {
 		return nil, err
@@ -876,7 +863,7 @@ func clearBoundingBoxes(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, video(ctx).ClearBoundingBoxes(a[0])
 }
 
-func checkBoundingBoxes(ctx *Context, arg ...interface{}) (interface{}, error) {
+func checkBoundingBoxes(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	a, err := intArgs(ctx, 5, arg)
 	if err != nil {
 		return nil, err
@@ -885,7 +872,7 @@ func checkBoundingBoxes(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return float64(index), err
 }
 
-func clearSound(ctx *Context, arg ...interface{}) (interface{}, error) {
+func clearSound(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	playerIndex, ok := arg[0].(float64)
 	if !ok {
 		return nil, fmt.Errorf("First argument should be the player index")
@@ -893,7 +880,7 @@ func clearSound(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, audio(ctx).Clear(int(playerIndex))
 }
 
-func pauseSound(ctx *Context, arg ...interface{}) (interface{}, error) {
+func pauseSound(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	playerIndex, ok := arg[0].(float64)
 	if !ok {
 		return nil, fmt.Errorf("First argument should be the player index")
@@ -905,7 +892,7 @@ func pauseSound(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, audio(ctx).Pause(int(playerIndex), enabled)
 }
 
-func loopSound(ctx *Context, arg ...interface{}) (interface{}, error) {
+func loopSound(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	playerIndex, ok := arg[0].(float64)
 	if !ok {
 		return nil, fmt.Errorf("First argument should be the player index")
@@ -917,7 +904,7 @@ func loopSound(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, audio(ctx).Loop(int(playerIndex), enabled)
 }
 
-func playSound(ctx *Context, arg ...interface{}) (interface{}, error) {
+func playSound(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	playerIndex, ok := arg[0].(float64)
 	if !ok {
 		return nil, fmt.Errorf("First argument should be the player index")
@@ -933,7 +920,7 @@ func playSound(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, audio(ctx).Play(int(playerIndex), freq, duration)
 }
 
-func typeof(ctx *Context, arg ...interface{}) (interface{}, error) {
+func typeof(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	if arg[0] == nil {
 		return "null", nil
 	}
@@ -949,7 +936,7 @@ func typeof(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if ok {
 		return "boolean", nil
 	}
-	_, ok = arg[0].(*Closure)
+	_, ok = arg[0].(*bscript.Closure)
 	if ok {
 		return "function", nil
 	}
@@ -964,7 +951,7 @@ func typeof(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return nil, fmt.Errorf("%s Unknown variable type", ctx.Pos)
 }
 
-func distance(ctx *Context, arg ...interface{}) (interface{}, error) {
+func distance(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	pos, err := floatArgs(ctx, 4, arg)
 	if err != nil {
 		return nil, err
@@ -976,12 +963,12 @@ func distance(ctx *Context, arg ...interface{}) (interface{}, error) {
 	return math.Sqrt(((bx - ax) * (bx - ax)) + ((by - ay) * (by - ay))), nil
 }
 
-func exit(ctx *Context, arg ...interface{}) (interface{}, error) {
+func exit(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	os.Exit(0)
 	return nil, nil
 }
 
-func assert(ctx *Context, arg ...interface{}) (interface{}, error) {
+func assert(ctx *bscript.Context, arg ...interface{}) (interface{}, error) {
 	a := arg[0]
 	b := arg[1]
 	msg := "Incorrect value"
@@ -1038,14 +1025,14 @@ func assert(ctx *Context, arg ...interface{}) (interface{}, error) {
 	}
 
 	if res {
-		debug(ctx, fmt.Sprintf("Assertion failure: %s: %v != %v", msg, a, b))
+		fmt.Println(ctx, fmt.Sprintf("Assertion failure: %s: %v != %v\n", msg, a, b))
 		return nil, fmt.Errorf("%s Assertion failure: %s: %v != %v", ctx.Pos, msg, a, b)
 	}
 	return nil, nil
 }
 
-func Builtins() map[string]Builtin {
-	return map[string]Builtin{
+func Builtins() map[string]bscript.Builtin {
+	return map[string]bscript.Builtin{
 		"print":                print,
 		"input":                input,
 		"textInput":            textInput,
@@ -1054,11 +1041,9 @@ func Builtins() map[string]Builtin {
 		"substr":               substr,
 		"split":                split,
 		"replace":              replace,
-		"debug":                debug,
 		"assert":               assert,
 		"setVideoMode":         setVideoMode,
 		"setPixel":             setPixel,
-		"random":               random,
 		"updateVideo":          updateVideo,
 		"clearVideo":           clearVideo,
 		"drawLine":             drawLine,
