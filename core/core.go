@@ -8,20 +8,23 @@ import (
 	"github.com/uzudil/benji4000/sound"
 )
 
-func repl(video *gfx.Gfx, sound *sound.Sound) {
-	bscript.Repl(video, sound)
-}
-
 func Run(source string, scale int, fullscreen, nosound, showAst *bool) {
 	video := gfx.NewGfx(scale, *fullscreen)
 	sound := sound.NewSound(*nosound)
+	app := map[string]interface{}{
+		"video": video,
+		"sound": sound,
+	}
 	if source != "" {
 		go func() {
-			bscript.Run(source, showAst, nil, video, sound)
+			bscript.Run(source, showAst, nil, app)
 			os.Exit(0)
 		}()
 	} else {
-		go repl(video, sound)
+		go func() {
+			bscript.Repl(app)
+			os.Exit(0)
+		}()
 	}
 
 	video.Render.MainLoop()

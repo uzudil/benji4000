@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"github.com/uzudil/benji4000/gfx"
+	"github.com/uzudil/benji4000/sound"
 )
 
 func floatArgs(ctx *Context, count int, arg []interface{}) ([]float64, error) {
@@ -60,9 +61,17 @@ func stringArgs(ctx *Context, count int, arg []interface{}) ([]string, error) {
 	return r, nil
 }
 
+func video(ctx *Context) *gfx.Gfx {
+	return ctx.App["video"].(*gfx.Gfx)
+}
+
+func audio(ctx *Context) *sound.Sound {
+	return ctx.App["sound"].(*sound.Sound)
+}
+
 func print(ctx *Context, arg ...interface{}) (interface{}, error) {
-	ctx.Video.Println(EvalString(arg[0]), true)
-	ctx.Video.UpdateVideo()
+	video(ctx).Println(EvalString(arg[0]), true)
+	video(ctx).UpdateVideo()
 	return nil, nil
 }
 
@@ -85,30 +94,30 @@ func limitFps(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	ctx.Video.Render.Fps = fps[0]
+	video(ctx).Render.Fps = fps[0]
 	return nil, nil
 }
 
 func getTicks(ctx *Context, arg ...interface{}) (interface{}, error) {
-	return ctx.Video.Render.GetTicks(), nil
+	return video(ctx).Render.GetTicks(), nil
 }
 
 func input(ctx *Context, arg ...interface{}) (interface{}, error) {
-	ctx.Video.Println(EvalString(arg[0]), false)
-	ctx.Video.UpdateVideo()
+	video(ctx).Println(EvalString(arg[0]), false)
+	video(ctx).UpdateVideo()
 
 	var text strings.Builder
 	// start capturing input
-	ctx.Video.Render.StartInput <- gfx.INPUT_MODE_ON
+	video(ctx).Render.StartInput <- gfx.INPUT_MODE_ON
 
 	// block until input mode is over
 	for done := false; done != true; {
 		select {
-		case char := <-ctx.Video.Render.CharInput:
+		case char := <-video(ctx).Render.CharInput:
 			if char == 9 {
 				if text.Len() > 0 {
 					// try to remove it from the screen
-					err := ctx.Video.Backspace()
+					err := video(ctx).Backspace()
 					if err == nil {
 						// remove the last character from memory
 						s := text.String()
@@ -120,13 +129,13 @@ func input(ctx *Context, arg ...interface{}) (interface{}, error) {
 				}
 			} else {
 				text.WriteRune(char)
-				ctx.Video.Println(string(char), false)
+				video(ctx).Println(string(char), false)
 			}
-		case <-ctx.Video.Render.StopInput:
-			ctx.Video.Println("", true)
+		case <-video(ctx).Render.StopInput:
+			video(ctx).Println("", true)
 			done = true
 		}
-		ctx.Video.UpdateVideo()
+		video(ctx).UpdateVideo()
 	}
 	return strings.TrimSpace(text.String()), nil
 }
@@ -213,7 +222,7 @@ func setVideoMode(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if mode < 0 || mode > 2 {
 		return nil, fmt.Errorf("Invalid video mode")
 	}
-	ctx.Video.VideoMode = int(mode)
+	video(ctx).VideoMode = int(mode)
 	return nil, nil
 }
 
@@ -222,7 +231,7 @@ func scroll(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	ctx.Video.Scroll(i[0], i[1])
+	video(ctx).Scroll(i[0], i[1])
 	return nil, nil
 }
 
@@ -231,7 +240,7 @@ func setPixel(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, ctx.Video.SetPixel(i[0], i[1], uint8(i[2]))
+	return nil, video(ctx).SetPixel(i[0], i[1], uint8(i[2]))
 }
 
 func drawText(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -243,7 +252,7 @@ func drawText(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("Fifth parameter should be a string")
 	}
-	return nil, ctx.Video.DrawText(i[0], i[1], text, uint8(i[2]), uint8(i[3]))
+	return nil, video(ctx).DrawText(i[0], i[1], text, uint8(i[2]), uint8(i[3]))
 }
 
 func drawFont(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -255,7 +264,7 @@ func drawFont(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("Fifth parameter should be a number")
 	}
-	return nil, ctx.Video.DrawFont(int(f[0]), int(f[1]), rune(ch), uint8(f[2]), uint8(f[3]))
+	return nil, video(ctx).DrawFont(int(f[0]), int(f[1]), rune(ch), uint8(f[2]), uint8(f[3]))
 }
 
 func drawLine(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -263,7 +272,7 @@ func drawLine(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, ctx.Video.DrawLine(i[0], i[1], i[2], i[3], uint8(i[4]))
+	return nil, video(ctx).DrawLine(i[0], i[1], i[2], i[3], uint8(i[4]))
 }
 
 func drawCircle(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -271,7 +280,7 @@ func drawCircle(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, ctx.Video.DrawCircle(i[0], i[1], i[2], uint8(i[3]))
+	return nil, video(ctx).DrawCircle(i[0], i[1], i[2], uint8(i[3]))
 }
 
 func fillCircle(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -279,7 +288,7 @@ func fillCircle(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, ctx.Video.FillCircle(i[0], i[1], i[2], uint8(i[3]))
+	return nil, video(ctx).FillCircle(i[0], i[1], i[2], uint8(i[3]))
 }
 
 func setBackground(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -287,7 +296,7 @@ func setBackground(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("First parameter should be a number")
 	}
-	ctx.Video.SetBackgroundColor(byte(c))
+	video(ctx).SetBackgroundColor(byte(c))
 	return nil, nil
 }
 
@@ -296,7 +305,7 @@ func fillRect(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, ctx.Video.FillRect(i[0], i[1], i[2], i[3], uint8(i[4]))
+	return nil, video(ctx).FillRect(i[0], i[1], i[2], i[3], uint8(i[4]))
 }
 
 func drawRect(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -304,7 +313,7 @@ func drawRect(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, ctx.Video.DrawRect(i[0], i[1], i[2], i[3], uint8(i[4]))
+	return nil, video(ctx).DrawRect(i[0], i[1], i[2], i[3], uint8(i[4]))
 }
 
 func getImage(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -312,7 +321,7 @@ func getImage(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ctx.Video.GetImage(i[0], i[1], i[2], i[3])
+	return video(ctx).GetImage(i[0], i[1], i[2], i[3])
 }
 
 func drawImage(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -324,7 +333,7 @@ func drawImage(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("Third argument should be an image")
 	}
-	return nil, ctx.Video.DrawImage(i[0], i[1], img, 0, 0, 0)
+	return nil, video(ctx).DrawImage(i[0], i[1], img, 0, 0, 0)
 }
 
 func drawImageRot(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -336,7 +345,7 @@ func drawImageRot(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("Fifth argument should be an image")
 	}
-	return nil, ctx.Video.DrawImage(i[0], i[1], img, i[2], i[3], i[4])
+	return nil, video(ctx).DrawImage(i[0], i[1], img, i[2], i[3], i[4])
 }
 
 func getImageWidth(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -372,7 +381,7 @@ func setSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
 		}
 		imgs[index] = img
 	}
-	return nil, ctx.Video.SetSprite(int(index), imgs)
+	return nil, video(ctx).SetSprite(int(index), imgs)
 }
 
 func delSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -380,7 +389,7 @@ func delSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("First argument should be a number")
 	}
-	return nil, ctx.Video.DelSprite(int(index))
+	return nil, video(ctx).DelSprite(int(index))
 }
 
 func drawSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -388,7 +397,7 @@ func drawSprite(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, ctx.Video.DrawSprite(i[0], i[1], i[2], i[3], i[4], i[5])
+	return nil, video(ctx).DrawSprite(i[0], i[1], i[2], i[3], i[4], i[5])
 }
 
 func checkSpriteCollision(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -396,7 +405,7 @@ func checkSpriteCollision(ctx *Context, arg ...interface{}) (interface{}, error)
 	if err != nil {
 		return nil, err
 	}
-	return ctx.Video.CheckSpriteCollision(i[0], i[1])
+	return video(ctx).CheckSpriteCollision(i[0], i[1])
 }
 
 func flood(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -404,19 +413,19 @@ func flood(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, ctx.Video.FloodFill(i[0], i[1], uint8(i[2]))
+	return nil, video(ctx).FloodFill(i[0], i[1], uint8(i[2]))
 }
 
 func clearVideo(ctx *Context, arg ...interface{}) (interface{}, error) {
-	return nil, ctx.Video.ClearVideo()
+	return nil, video(ctx).ClearVideo()
 }
 
 func updateVideo(ctx *Context, arg ...interface{}) (interface{}, error) {
-	if ctx.Video == nil {
+	if video(ctx) == nil {
 		panic("Video card not initialized")
 	}
 	// todo: delay here to achive a requested max framerate (default to 60)
-	return nil, ctx.Video.UpdateVideo()
+	return nil, video(ctx).UpdateVideo()
 }
 
 func random(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -511,7 +520,7 @@ func isKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("First argument should be a number")
 	}
-	// action := ctx.Video.Render.Window.GetKey(glfw.Key(key))
+	// action := video(ctx).Render.Window.GetKey(glfw.Key(key))
 	// return (action == glfw.Press || action == glfw.Repeat), nil
 	gfx.KeyLock.Lock()
 	b := gfx.KeyDown[glfw.Key(key)]
@@ -522,11 +531,11 @@ func isKeyDown(ctx *Context, arg ...interface{}) (interface{}, error) {
 
 func textInput(ctx *Context, arg ...interface{}) (interface{}, error) {
 	// start capturing input (just capture a single key)
-	ctx.Video.Render.StartInput <- gfx.INPUT_MODE_CHAR
+	video(ctx).Render.StartInput <- gfx.INPUT_MODE_CHAR
 
 	// block until input mode is over
 	select {
-	case char := <-ctx.Video.Render.CharInput:
+	case char := <-video(ctx).Render.CharInput:
 		if char == 9 {
 			return "backspace", nil
 		} else if char == 27 {
@@ -536,7 +545,7 @@ func textInput(ctx *Context, arg ...interface{}) (interface{}, error) {
 		var text strings.Builder
 		text.WriteRune(char)
 		return strings.TrimSpace(text.String()), nil
-	case <-ctx.Video.Render.StopInput:
+	case <-video(ctx).Render.StopInput:
 		return nil, nil
 	}
 }
@@ -548,8 +557,8 @@ func fontIndex(ctx *Context, arg []interface{}) (int, error) {
 		return 0, fmt.Errorf("%s first arg should be a number (%v)", ctx.Pos, arg[0])
 	}
 	index := int(f)
-	if index < 0 || index >= len(ctx.Video.Font) {
-		return 0, fmt.Errorf("%s index out of bounds - should be 0 to %d", ctx.Pos, len(ctx.Video.Font))
+	if index < 0 || index >= len(video(ctx).Font) {
+		return 0, fmt.Errorf("%s index out of bounds - should be 0 to %d", ctx.Pos, len(video(ctx).Font))
 	}
 	return index, nil
 }
@@ -560,7 +569,7 @@ func getFont(ctx *Context, arg ...interface{}) (interface{}, error) {
 		return nil, err
 	}
 	font := [8]float64{}
-	for i, f := range ctx.Video.Font[index] {
+	for i, f := range video(ctx).Font[index] {
 		font[i] = float64(f)
 	}
 	return font, nil
@@ -587,7 +596,7 @@ func setFont(ctx *Context, arg ...interface{}) (interface{}, error) {
 		font[i] = uint8(f)
 	}
 	for i, v := range font {
-		ctx.Video.Font[index][i] = v
+		video(ctx).Font[index][i] = v
 	}
 	return nil, nil
 }
@@ -598,13 +607,13 @@ func getColor(ctx *Context, arg ...interface{}) (interface{}, error) {
 		return 0, fmt.Errorf("%s first arg should be a number (%v)", ctx.Pos, arg[0])
 	}
 	index := int(f)
-	if index < 0 || index >= len(ctx.Video.Colors) {
-		return 0, fmt.Errorf("%s index out of bounds - should be 0 to %d", ctx.Pos, len(ctx.Video.Colors))
+	if index < 0 || index >= len(video(ctx).Colors) {
+		return 0, fmt.Errorf("%s index out of bounds - should be 0 to %d", ctx.Pos, len(video(ctx).Colors))
 	}
 	return [3]float64{
-		float64(ctx.Video.Colors[index*3]),
-		float64(ctx.Video.Colors[index*3+1]),
-		float64(ctx.Video.Colors[index*3+2]),
+		float64(video(ctx).Colors[index*3]),
+		float64(video(ctx).Colors[index*3+1]),
+		float64(video(ctx).Colors[index*3+2]),
 	}, nil
 }
 
@@ -614,12 +623,12 @@ func setColor(ctx *Context, arg ...interface{}) (interface{}, error) {
 		return nil, err
 	}
 	index := a[0]
-	if index < 0 || index >= len(ctx.Video.Colors) {
-		return 0, fmt.Errorf("%s index out of bounds - should be 0 to %d", ctx.Pos, len(ctx.Video.Colors))
+	if index < 0 || index >= len(video(ctx).Colors) {
+		return 0, fmt.Errorf("%s index out of bounds - should be 0 to %d", ctx.Pos, len(video(ctx).Colors))
 	}
-	ctx.Video.Colors[index*3] = uint8(a[1])
-	ctx.Video.Colors[index*3+1] = uint8(a[2])
-	ctx.Video.Colors[index*3+2] = uint8(a[3])
+	video(ctx).Colors[index*3] = uint8(a[1])
+	video(ctx).Colors[index*3+1] = uint8(a[2])
+	video(ctx).Colors[index*3+2] = uint8(a[3])
 	return nil, nil
 }
 
@@ -833,7 +842,7 @@ func addBoundingBox(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	index, err := ctx.Video.AddBoundingBox(a[0], a[1], a[2], a[3], a[4])
+	index, err := video(ctx).AddBoundingBox(a[0], a[1], a[2], a[3], a[4])
 	return float64(index), err
 }
 
@@ -842,7 +851,7 @@ func getBoundingBox(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	x, y, x2, y2, err := ctx.Video.GetBoundingBox(a[0], a[1])
+	x, y, x2, y2, err := video(ctx).GetBoundingBox(a[0], a[1])
 	r := make([]interface{}, 4)
 	r[0] = float64(x)
 	r[1] = float64(y)
@@ -856,7 +865,7 @@ func delBoundingBox(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, ctx.Video.DelBoundingBox(a[0], a[1])
+	return nil, video(ctx).DelBoundingBox(a[0], a[1])
 }
 
 func clearBoundingBoxes(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -864,7 +873,7 @@ func clearBoundingBoxes(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, ctx.Video.ClearBoundingBoxes(a[0])
+	return nil, video(ctx).ClearBoundingBoxes(a[0])
 }
 
 func checkBoundingBoxes(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -872,7 +881,7 @@ func checkBoundingBoxes(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	index, err := ctx.Video.CheckBoundingBoxes(a[0], a[1], a[2], a[3], a[4])
+	index, err := video(ctx).CheckBoundingBoxes(a[0], a[1], a[2], a[3], a[4])
 	return float64(index), err
 }
 
@@ -881,7 +890,7 @@ func clearSound(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("First argument should be the player index")
 	}
-	return nil, ctx.Sound.Clear(int(playerIndex))
+	return nil, audio(ctx).Clear(int(playerIndex))
 }
 
 func pauseSound(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -893,7 +902,7 @@ func pauseSound(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("Second argument should be a boolean")
 	}
-	return nil, ctx.Sound.Pause(int(playerIndex), enabled)
+	return nil, audio(ctx).Pause(int(playerIndex), enabled)
 }
 
 func loopSound(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -905,7 +914,7 @@ func loopSound(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("Second argument should be a boolean")
 	}
-	return nil, ctx.Sound.Loop(int(playerIndex), enabled)
+	return nil, audio(ctx).Loop(int(playerIndex), enabled)
 }
 
 func playSound(ctx *Context, arg ...interface{}) (interface{}, error) {
@@ -921,7 +930,7 @@ func playSound(ctx *Context, arg ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("Third argument should be the duration")
 	}
-	return nil, ctx.Sound.Play(int(playerIndex), freq, duration)
+	return nil, audio(ctx).Play(int(playerIndex), freq, duration)
 }
 
 func typeof(ctx *Context, arg ...interface{}) (interface{}, error) {

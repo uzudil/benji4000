@@ -11,8 +11,6 @@ import (
 
 	"github.com/alecthomas/participle/lexer"
 	"github.com/alecthomas/repr"
-	"github.com/uzudil/benji4000/gfx"
-	"github.com/uzudil/benji4000/sound"
 )
 
 var ANON_COUNT uint32
@@ -42,8 +40,6 @@ type Closure struct {
 	Defs map[string]*Closure
 	// the parent closure
 	Parent *Closure
-	// the graphics
-	Video *gfx.Gfx
 }
 
 type Runtime struct {
@@ -66,10 +62,8 @@ type Context struct {
 	Pos lexer.Position
 	// the program
 	Program *Program
-	// the video card
-	Video *gfx.Gfx
-	// the sound card
-	Sound *sound.Sound
+	// extra app objects
+	App map[string]interface{}
 	// The sandbox directory
 	Sandbox *string
 }
@@ -756,8 +750,7 @@ func CreateContext(program *Program) *Context {
 		RuntimeStack: []Runtime{},
 		Pos:          lexer.Position{},
 		Program:      program,
-		Video:        nil,
-		Sound:        nil,
+		App:          nil,
 	}
 }
 
@@ -823,7 +816,7 @@ func Load(source string, showAst *bool, ctx *Context) (interface{}, error) {
 	return ast.init(ctx, source)
 }
 
-func Run(source string, showAst *bool, ctx *Context, video *gfx.Gfx, sound *sound.Sound) (interface{}, error) {
+func Run(source string, showAst *bool, ctx *Context, app map[string]interface{}) (interface{}, error) {
 	// run it
 	fmt.Println("Loading...")
 	ast, err := load(source, showAst)
@@ -837,8 +830,7 @@ func Run(source string, showAst *bool, ctx *Context, video *gfx.Gfx, sound *soun
 	if err != nil {
 		return nil, err
 	}
-	ctx.Video = video
-	ctx.Sound = sound
+	ctx.App = app
 	fmt.Println("Initializing done.")
 
 	fmt.Println("Running...")
