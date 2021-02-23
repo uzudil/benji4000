@@ -23,7 +23,7 @@ func Run(source string, scale int, fullscreen, nosound, showAst *bool) {
 	}
 	if source != "" {
 		go func() {
-			bscript.Run(source, showAst, nil, app)
+			bscript.Run(source, *showAst, nil, app)
 			os.Exit(0)
 		}()
 	} else {

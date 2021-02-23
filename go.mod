@@ -14,7 +14,7 @@ require (
 	github.com/go-gl/glfw v0.0.0-20200222043503-6f7a984d4dc4
 	github.com/go-gl/mathgl v0.0.0-20190713194549-592312d8590a
 	github.com/hajimehoshi/oto v0.6.1
-	github.com/uzudil/bscript v0.0.0-20210209011546-44ec678b572e
+	github.com/uzudil/bscript v0.0.0-20210223011105-972602b7a312
 	github.com/veandco/go-sdl2 v0.4.1 // indirect
 	golang.org/x/mobile v0.0.0-20200329125638-4c31acba0007
 	golang.org/x/tools v0.0.0-20200409210453-700752c24408 // indirect
